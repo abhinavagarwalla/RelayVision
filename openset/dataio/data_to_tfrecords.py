@@ -4,7 +4,7 @@ import os, sys
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 from tqdm import tqdm
 import numpy as np
-
+from random import shuffle, random
 from os.path import expanduser
 # from pathos.multiprocessing import ProcessPool as Pool
 from scipy.io import loadmat
@@ -21,11 +21,16 @@ def _bytes_feature(value):
 label_mapping = {'aeroplane': 0, 'bicycle': 1, 'bus': 2, 'car': 3,
     'horse': 4, 'knife': 5, 'motorcycle': 6, 'person': 7, 'plant': 8,
     'skateboard': 9, 'train': 10, 'truck': 11, 'other': 12}
+classes = 13
 
 def load_image_label(addr):
-    img = imread(addr)
-    label = label_mapping[addr.split('/')[-2]]
-    return img.astype(np.float32), np.array(label).astype(np.int32)
+    img = imresize(imread(addr), (64, 64))
+    label = np.zeros(classes)
+    label[label_mapping[addr.split('/')[-2]]] = 1
+    # print(label, len([label]))
+    # print(img.shape)
+    # exit(0)
+    return img.astype(np.float32), np.array(label).astype(np.float32)
 
 def write_record(img_data_path, train_filename, addrs, split):
     writer = tf.python_io.TFRecordWriter(train_filename)
@@ -33,6 +38,7 @@ def write_record(img_data_path, train_filename, addrs, split):
         # try:
         img, label = load_image_label(addrs[idx])
 
+        # print(img.shape, label.shape)
         # Create a feature
         feature = {split + '/label': _bytes_feature(tf.compat.as_bytes(label.tostring())),
                    split + '/image': _bytes_feature(tf.compat.as_bytes(img.tostring()))}
@@ -59,8 +65,9 @@ def write_data(img_data_path):
     # test_addrs = [glob.glob(img_data_path + i + '/*') for i in patients[int(0.9*len(patients)):]]
 
     n_shards = 16
+    shuffle(addrs) 
     addrs = np.array_split(np.array(addrs), n_shards)
-    filenames = [expanduser("~") + '/Desktop/RelayVision/data/validation_tfrecords/{}_{:0>3}_{:0>3}.tfrecords'.format('train', i, n_shards-1) for i in range(n_shards)]
+    filenames = [expanduser("~") + '/Desktop/RelayVision/data/train_tfrecords/{}_{:0>3}_{:0>3}.tfrecords'.format('train', i, n_shards-1) for i in range(n_shards)]
     # val_filenames = [expanduser("~") + '/domain_adaptation/eye_gaze/data/realMPII/{}_{:0>3}_{:0>3}.tfrecords'.format('val', i, n_shards-1) for i in range(n_shards)]
     # test_filenames = [expanduser("~") + '/domain_adaptation/eye_gaze/data/realMPII/{}_{:0>3}_{:0>3}.tfrecords'.format('test', i, n_shards-1) for i in range(n_shards)]
 
@@ -73,5 +80,5 @@ def write_data(img_data_path):
 
 if __name__=="__main__":
     home = expanduser("~")
-    img_data_path = home + '/Desktop/RelayVision/data/validation/'
+    img_data_path = home + '/Desktop/RelayVision/data/train/'
     write_data(img_data_path)
