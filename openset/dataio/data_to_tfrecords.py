@@ -61,6 +61,7 @@ def write_data(img_data_path):
     for i in categories:
         addrs.extend(glob.glob(img_data_path + i + '/*'))
 
+    print(len(addrs))
     # val_addrs = [glob.glob(img_data_path + i + '/*') for i in patients[int(0.75*len(patients)):int(0.90*len(patients))]]
     # test_addrs = [glob.glob(img_data_path + i + '/*') for i in patients[int(0.9*len(patients)):]]
 
