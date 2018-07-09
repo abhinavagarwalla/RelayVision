@@ -55,7 +55,7 @@ def write_record(img_data_path, train_filename, addrs, split):
     writer.close()
 
 def write_data(img_data_path):
-    categories = os.listdir(img_data_path)[1:]
+    categories = filter(lambda x: os.path.isdir(os.path.join(img_data_path,x)), os.listdir(img_data_path))
 
     addrs = []
     for i in categories:
@@ -67,7 +67,9 @@ def write_data(img_data_path):
     n_shards = 16
     shuffle(addrs) 
     addrs = np.array_split(np.array(addrs), n_shards)
-    filenames = [expanduser("~") + '/Desktop/RelayVision/data/train_tfrecords/{}_{:0>3}_{:0>3}.tfrecords'.format('train', i, n_shards-1) for i in range(n_shards)]
+    #write_data_path = expanduser("~") + '/Desktop/RelayVision/data/train_tfrecords/' # for Aggie's laptop
+    write_data_path = '/home/arna/Project/RelayVision/train_tfrecords/' # for Arna's lab PC
+    filenames = [write_data_path+'{}_{:0>3}_{:0>3}.tfrecords'.format('train', i, n_shards-1) for i in range(n_shards)]
     # val_filenames = [expanduser("~") + '/domain_adaptation/eye_gaze/data/realMPII/{}_{:0>3}_{:0>3}.tfrecords'.format('val', i, n_shards-1) for i in range(n_shards)]
     # test_filenames = [expanduser("~") + '/domain_adaptation/eye_gaze/data/realMPII/{}_{:0>3}_{:0>3}.tfrecords'.format('test', i, n_shards-1) for i in range(n_shards)]
 
@@ -80,5 +82,6 @@ def write_data(img_data_path):
 
 if __name__=="__main__":
     home = expanduser("~")
-    img_data_path = home + '/Desktop/RelayVision/data/train/'
+    #img_data_path = home + '/Desktop/RelayVision/data/train/' # for Aggie's laptop
+    img_data_path = '/media/arna/340fd3c9-2648-4333-9ec9-239babc34bb7/arna_data/RelayVision/train/' #for Arna's lab PC
     write_data(img_data_path)
