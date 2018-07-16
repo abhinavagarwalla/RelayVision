@@ -2,50 +2,6 @@ from ops import *
 import tensorflow as tf
 import sys
 
-class MeanReLUModel():
-    def __init__(self, images, labels, output_dim=None, mean=None, prob=0.5, scope=None):
-        self.images = images
-        self.labels = labels
-        self.output_dim = output_dim
-        self.scope = scope
-        self.mean = mean
-        self.prob = prob
-
-    def adaptation(self, h2, h4,l2):
-        h2_shape = h2.get_shape().as_list()
-        h4_reshaped = tf.image.resize_bilinear(h4, [32, 60])
-        h2_reshaped = tf.image.resize_bilinear(h2, [32, 60])
-        l2 = tf.reshape(l2, [-1, 32, 60, 5])
-        a1 = tf.concat([h2_reshaped, h4_reshaped, l2], axis=3)
-        #print("h2::", h2.get_shape())
-        #print("h4:", h4.get_shape())
-        #print("a1:", a1.get_shape())
-        return a1
-
-    def get_model(self):
-        with tf.variable_scope(self.scope):
-            input0 = mean_normalize(self.images, self.mean)
-            # input0 = denormalize(input00)   #Converting from [-1, 1] to [0, 1]
-            h0 = tf.nn.relu(conv2d(input0, 32, 3, 3, 1, 1, name='h0_conv'))
-            h1 = tf.nn.relu(conv2d(h0, 32, 3, 3, 1, 1, name='h1_conv'))
-            h2 = tf.nn.relu(conv2d(h1, 64, 3, 3, 1, 1, name='h2_conv'))
-            
-            p1 = tf.layers.max_pooling2d(h2, 3, 2, name='pool1')
-            h3 = tf.nn.relu(conv2d(p1, 80, 3, 3, 1, 1, name='h3_conv'))
-            h4 = tf.nn.relu(conv2d(h3, 192, 3, 3, 1, 1, name='h4_conv'))
-            p2 = tf.layers.max_pooling2d(h4, 2, 2, name='pool2')
-            l1 = tf.contrib.layers.flatten(p2)
-
-            l2 = tf.nn.relu(linear(l1, 9600, scope="Linear9600"))
-            l2 = tf.layers.dropout(inputs=l2, rate=self.prob, name='l2_dropout')
-            l3 = tf.nn.relu(linear(l2, 1000, scope="Linear1000"))
-            l3 = tf.layers.dropout(inputs=l3, rate=self.prob, name='l3_dropout')
-            # out = tf.nn.tanh(linear(l3, F.output_dim))
-            out = linear(l3, self.output_dim)
-
-            to_adapt = self.adaptation(h2, h4, l2)
-            return out, to_adapt
-
 class SimpleModel():
     def __init__(self, images, labels, output_dim=None, scope=None):
         self.images = images
@@ -73,13 +29,13 @@ class SimpleModel():
             h2 = lrelu(conv2d(h1, 64, 3, 3, 1, 1, name='h2_conv'), 0.2)
             
             p1 = tf.layers.max_pooling2d(h2, 3, 2, name='pool1')
-            h3 = lrelu(conv2d(p1, 80, 3, 3, 1, 1, name='h3_conv'), 0.2)
-            h4 = lrelu(conv2d(h3, 192, 3, 3, 1, 1, name='h4_conv'), 0.2)
+            h3 = lrelu(conv2d(p1, 64, 3, 3, 1, 1, name='h3_conv'), 0.2)
+            h4 = lrelu(conv2d(h3, 128, 3, 3, 1, 1, name='h4_conv'), 0.2)
             p2 = tf.layers.max_pooling2d(h4, 2, 2, name='pool2')
             l1 = tf.contrib.layers.flatten(p2)
 
-            l2 = lrelu(linear(l1, 96, scope="Linear9600"), 0.2)
-            l3 = lrelu(linear(l2, 10, scope="Linear1000"), 0.2)
+            l2 = lrelu(linear(l1, 256, scope="Linear256"), 0.2)
+            l3 = lrelu(linear(l2, 32, scope="Linear32"), 0.2)
             # out = tf.nn.tanh(linear(l3, F.output_dim))
             out = linear(l3, self.output_dim)
 

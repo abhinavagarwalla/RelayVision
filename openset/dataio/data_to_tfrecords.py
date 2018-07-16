@@ -6,7 +6,7 @@ from tqdm import tqdm
 import numpy as np
 from random import shuffle, random
 from os.path import expanduser
-# from pathos.multiprocessing import ProcessPool as Pool
+from pathos.multiprocessing import ProcessPool as Pool
 from scipy.io import loadmat
 from scipy.misc import imresize, imread
 
@@ -54,6 +54,7 @@ def write_record(img_data_path, train_filename, addrs, split):
 
     writer.close()
 
+split_str = 'train'
 def write_data(img_data_path):
     categories = filter(lambda x: os.path.isdir(os.path.join(img_data_path,x)), os.listdir(img_data_path))
 
@@ -68,21 +69,21 @@ def write_data(img_data_path):
     n_shards = 16
     shuffle(addrs) 
     addrs = np.array_split(np.array(addrs), n_shards)
-    #write_data_path = expanduser("~") + '/Desktop/RelayVision/data/train_tfrecords/' # for Aggie's laptop
-    write_data_path = '/home/arna/Project/RelayVision/train_tfrecords/' # for Arna's lab PC
-    filenames = [write_data_path+'{}_{:0>3}_{:0>3}.tfrecords'.format('train', i, n_shards-1) for i in range(n_shards)]
+    write_data_path = expanduser("~") + '/Desktop/RelayVision/data/' + split_str + '_tfrecords/' # for Aggie's laptop
+    # write_data_path = '/home/arna/Project/RelayVision/train_tfrecords/' # for Arna's lab PC
+    filenames = [write_data_path+'{}_{:0>3}_{:0>3}.tfrecords'.format(split_str, i, n_shards-1) for i in range(n_shards)]
     # val_filenames = [expanduser("~") + '/domain_adaptation/eye_gaze/data/realMPII/{}_{:0>3}_{:0>3}.tfrecords'.format('val', i, n_shards-1) for i in range(n_shards)]
     # test_filenames = [expanduser("~") + '/domain_adaptation/eye_gaze/data/realMPII/{}_{:0>3}_{:0>3}.tfrecords'.format('test', i, n_shards-1) for i in range(n_shards)]
 
-    write_record(img_data_path, filenames[0], addrs[0], 'train')
-    # p = Pool(n_shards)
-    # p.map(write_record, train_filenames, train_addrs, ['train' for i in range(n_shards)])
+    # write_record(img_data_path, train_filenames[0], addrs[0], 'train')
+    p = Pool(n_shards)
+    p.map(write_record, img_data_path, filenames, addrs, [split_str for i in range(n_shards)])
     # p.map(write_record, val_filenames, val_addrs, ['val' for i in range(n_shards/2)])
     # p.map(write_record, test_filenames, test_addrs, ['test' for i in range(n_shards/2)])
     sys.stdout.flush()
 
 if __name__=="__main__":
     home = expanduser("~")
-    #img_data_path = home + '/Desktop/RelayVision/data/train/' # for Aggie's laptop
-    img_data_path = '/media/arna/340fd3c9-2648-4333-9ec9-239babc34bb7/arna_data/RelayVision/train/' #for Arna's lab PC
+    img_data_path = home + '/Desktop/RelayVision/data/' + split_str + os.sep # for Aggie's laptop
+    # img_data_path = '/media/arna/340fd3c9-2648-4333-9ec9-239babc34bb7/arna_data/RelayVision/train/' #for Arna's lab PC
     write_data(img_data_path)

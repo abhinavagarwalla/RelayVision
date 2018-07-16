@@ -27,6 +27,7 @@ class OpensetClassifier():
 
     def get_loss(self):
         self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.out, labels=self.labels))
+        self.accuracy = tf.contrib.metrics.accuracy(predictions=self.out, labels=self.labels)
 
     def build_model(self):
         self.images, self.labels = self.dataloader.get_model_inputs()
@@ -57,6 +58,8 @@ class OpensetClassifier():
 
         tf.summary.scalar('cross_entropy_loss', self.loss)
         tf.summary.scalar('learning_rate', self.lr)
+        tf.summary.scalar('accuracy', self.accuracy)
+
         self.summary_op = tf.summary.merge_all()
 
         self.saver = tf.train.Saver(max_to_keep=None)
@@ -82,12 +85,13 @@ class OpensetClassifier():
             for step in range(int(F.num_steps)):
                 try:
                     if step % F.log_every == 0:
-                        loss, _, summaries, global_step_count = sess.run([self.loss, self.grad_update,
-                         self.summary_op, sv.global_step], 
+                        loss, _, accuracy, summaries, global_step_count = sess.run([self.loss, self.grad_update,
+                         self.accuracy, self.summary_op, sv.global_step], 
                          feed_dict={self.dataloader.split_handle: self.training_handle})
 
                         sv.summary_computed(sess, summaries, global_step=global_step_count)
-                        logging.info("Step: {}/{}, Global Step: {}, loss: {}".format(step, F.num_steps, global_step_count, loss))
+                        logging.info("Step: {}/{}, Global Step: {}, loss: {}, accuracy: {}".format(step, F.num_steps,
+                                                                                                    global_step_count, loss, accuracy))
                     else:
                         loss, _, global_step_count = sess.run([self.loss, self.grad_update,
                          sv.global_step], feed_dict={self.dataloader.split_handle: self.training_handle})
@@ -99,17 +103,18 @@ class OpensetClassifier():
                 if step % F.save_every==1:
                     logging.info('Saving model to disk as step={}'.format(step))
                     sess.run(self.validation_iter.initializer)
-                    eval_loss = []
+                    eval_loss, eval_accuracy = [], []
                     while True:
                         try:
-                            loss, labels = sess.run([self.loss, self.labels], 
+                            loss, accuracy, labels = sess.run([self.loss, self.accuracy, self.labels], 
                                 feed_dict={self.dataloader.split_handle: self.validation_handle})
                             # logging.info("Trying...{}, mean label: {}".format(len(eval_loss), np.mean(labels)))
                             eval_loss.append(loss)
+                            eval_accuracy.append(accuracy)
                         except:
                             if len(eval_loss) != 0:
                                 eval_loss = np.array(eval_loss)
-                                logging.info("Current Evaluation Loss at step({}): {}, Mean Loss: {}, {}, {}".format(step, len(eval_loss), eval_loss.mean(), eval_loss.max(), eval_loss.min()))
+                                logging.info("Current Evaluation Loss at step({}): {}, Mean Loss: {}, Mean Accuracy: {}".format(step, len(eval_loss), eval_loss.mean(), eval_accuracy.mean()))
                             # if eval_loss.mean() < current_best_loss:
                             #     current_best_loss = eval_loss.mean()
                             #     sv.saver.save(sess, sv.save_path, global_step=global_step_count)
