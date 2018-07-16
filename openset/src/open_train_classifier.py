@@ -29,7 +29,7 @@ flags.DEFINE_string("checkpoint_file", "1.ckpt", "Name of the model checkpoint")
 flags.DEFINE_string("log_dir", "../logs/open-try-1/", "Directory name to save the logs [logs]")
 flags.DEFINE_boolean("load_chkpt", False, "True for loading saved checkpoint")
 
-flags.DEFINE_integer("batch_size", 8, "The size of batch images [64]")
+flags.DEFINE_integer("batch_size", 16, "The size of batch images [64]")
 flags.DEFINE_integer("output_dim", 13, "Number of output classes.")
 
 flags.DEFINE_integer("channels", 3, "Number of channels in input image")

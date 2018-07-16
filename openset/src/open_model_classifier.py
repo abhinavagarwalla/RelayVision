@@ -9,7 +9,7 @@ from tensorflow.contrib.framework.python.ops.variables import get_or_create_glob
 from tensorflow.python.platform import tf_logging as logging
 from glob import glob
 from dataio.data_reader import CLSReader
-from model.base_model import SimpleModel, MeanReLUModel
+from model.base_model import SimpleModel
 
 F = tf.app.flags.FLAGS
 
@@ -27,7 +27,8 @@ class OpensetClassifier():
 
     def get_loss(self):
         self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.out, labels=self.labels))
-        self.accuracy = tf.contrib.metrics.accuracy(predictions=self.out, labels=self.labels)
+        self.accuracy = tf.contrib.metrics.accuracy(predictions = tf.argmax(self.out, axis=1),
+                                                     labels = tf.argmax(self.labels, axis=1))
 
     def build_model(self):
         self.images, self.labels = self.dataloader.get_model_inputs()
@@ -114,6 +115,7 @@ class OpensetClassifier():
                         except:
                             if len(eval_loss) != 0:
                                 eval_loss = np.array(eval_loss)
+                                eval_accuracy = np.array(eval_accuracy)
                                 logging.info("Current Evaluation Loss at step({}): {}, Mean Loss: {}, Mean Accuracy: {}".format(step, len(eval_loss), eval_loss.mean(), eval_accuracy.mean()))
                             # if eval_loss.mean() < current_best_loss:
                             #     current_best_loss = eval_loss.mean()
