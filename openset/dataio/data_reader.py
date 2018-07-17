@@ -7,7 +7,7 @@ class CLSReader():
     def __init__(self):
         self.split_handle = tf.placeholder(tf.string, shape=[])
         self.train_split, self.val_split, self.test_split = None, None, None
-        self.iterator = tf.contrib.data.Iterator.from_string_handle(self.split_handle,
+        self.iterator = tf.data.Iterator.from_string_handle(self.split_handle,
          (tf.float32, tf.float32), ([F.batch_size, F.img_height, F.img_width, F.channels], [F.batch_size, F.output_dim]))
         self.next_element = self.iterator.get_next()
 
@@ -21,8 +21,8 @@ class CLSReader():
         return self.train_split
 
     def create_validation_dataset(self):
-        self.split = 'train'
-        filenames = glob(F.val_data_path + 'train*.tfrecords')
+        self.split = 'validation'
+        filenames = glob(F.val_data_path + 'validation*.tfrecords')
         self.val_split = self.create_dataset(filenames, 1)
         return self.val_split
 
@@ -35,8 +35,8 @@ class CLSReader():
 
     def create_dataset(self, filenames, num_epochs=None):
         # filenames = tf.placeholder(tf.string, shape=[None])
-        dataset = tf.contrib.data.TFRecordDataset(filenames)
-        dataset = dataset.map(self.parse_records, num_threads=F.num_threads, output_buffer_size=F.capacity)
+        dataset = tf.data.TFRecordDataset(filenames)
+        dataset = dataset.map(self.parse_records, num_parallel_calls=F.num_threads)#, output_buffer_size=F.capacity)
         # dataset = dataset.shuffle(buffer_size=10000)
         dataset = dataset.batch(F.batch_size)
         if num_epochs:
