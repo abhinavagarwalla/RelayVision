@@ -9,8 +9,8 @@ from src.open_evaluator_new import GazeEval
 import tensorflow as tf
 
 flags = tf.app.flags
-flags.DEFINE_integer("num_steps", 5000, "Epochs to train ")
-flags.DEFINE_integer("decay_step", 500, "Decay step of learning rate in steps")
+flags.DEFINE_integer("num_steps", 50000, "Epochs to train ")
+flags.DEFINE_integer("decay_step", 5000, "Decay step of learning rate in steps")
 flags.DEFINE_float("decay_rate", 0.5, "Decay rate of learning rate")
 flags.DEFINE_float("gpu_frac", 0.5, "Gpu fraction")
 flags.DEFINE_float("initial_learning_rate", 0.001, "Learing rate")
