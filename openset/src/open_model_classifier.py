@@ -76,7 +76,6 @@ class OpensetClassifier():
             sv = tf.train.Supervisor(logdir=F.log_dir, summary_op=None, init_fn=restore_fn, saver=self.saver)
         else:
             sv = tf.train.Supervisor(logdir=F.log_dir, summary_op=None, init_fn=None, saver=self.saver)
-
         current_best_loss = 1000. #TODO: Read it from a file for multiple restarts
         gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=F.gpu_frac)
         with sv.managed_session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
@@ -117,7 +116,8 @@ class OpensetClassifier():
                                 eval_loss = np.array(eval_loss)
                                 eval_accuracy = np.array(eval_accuracy)
                                 logging.info("Current Evaluation Loss at step({}): {}, Mean Loss: {}, Mean Accuracy: {}".format(step, len(eval_loss), eval_loss.mean(), eval_accuracy.mean()))
-                            # if eval_loss.mean() < current_best_loss:
-                            #     current_best_loss = eval_loss.mean()
-                            #     sv.saver.save(sess, sv.save_path, global_step=global_step_count)
+                            if eval_loss.mean() < current_best_loss:
+                                print('tada.. lower eval loss!!!')
+                                current_best_loss = eval_loss.mean()
+                                sv.saver.save(sess, sv.save_path+'_reducedLoss', global_step=global_step_count)
                             break
