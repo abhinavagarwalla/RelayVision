@@ -27,8 +27,28 @@ class OpensetClassifier():
 
     def get_loss(self):
         self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.out, labels=self.labels))
-        self.accuracy = tf.contrib.metrics.accuracy(predictions = tf.argmax(self.out, axis=1),
-                                                     labels = tf.argmax(self.labels, axis=1))
+
+        out_class = tf.argmax(self.out, axis=1)
+        labels_class = tf.argmax(self.labels, axis=1)
+
+        def compute_weights(x):
+            return tf.cond(tf.equal(x, 12), lambda: tf.constant(1/10.), lambda: tf.constant(1.0))
+
+        class_weights = tf.map_fn(compute_weights, labels_class, dtype = tf.float32)
+        self.weighted_loss = tf.losses.softmax_cross_entropy(onehot_labels = self.labels,
+                                                            logits = self.out,
+                                                            weights = class_weights)
+
+        self.accuracy = tf.contrib.metrics.accuracy(predictions = out_class,
+                                                     labels = labels_class)
+
+        self.mean_class_wise_accuracy, self.mean_class_wise_accuracy_update = tf.metrics.mean_per_class_accuracy(predictions = out_class, 
+                                                                    labels = labels_class, 
+                                                                    num_classes = F.output_dim)
+        
+        self.confusion_matrix = tf.confusion_matrix(labels = labels_class,
+                                                    predictions = out_class, 
+                                                    num_classes = F.output_dim)
 
     def build_model(self):
         self.images, self.labels = self.dataloader.get_model_inputs()
@@ -55,12 +75,13 @@ class OpensetClassifier():
             staircase=True)
 
         # Now we can define the optimizer that takes on the learning rate
-        self.grad_update = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(self.loss, global_step=global_step)
+        self.grad_update = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(self.weighted_loss,
+                                                                                 global_step=global_step)
 
         tf.summary.scalar('cross_entropy_loss', self.loss)
         tf.summary.scalar('learning_rate', self.lr)
         tf.summary.scalar('accuracy', self.accuracy)
-
+        tf.summary.scalar('class_wise_accuracy', self.mean_class_wise_accuracy)
         self.summary_op = tf.summary.merge_all()
 
         self.saver = tf.train.Saver(max_to_keep=None)
@@ -76,6 +97,7 @@ class OpensetClassifier():
             sv = tf.train.Supervisor(logdir=F.log_dir, summary_op=None, init_fn=restore_fn, saver=self.saver)
         else:
             sv = tf.train.Supervisor(logdir=F.log_dir, summary_op=None, init_fn=None, saver=self.saver)
+
         current_best_loss = 1000. #TODO: Read it from a file for multiple restarts
         gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=F.gpu_frac)
         with sv.managed_session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
@@ -83,41 +105,51 @@ class OpensetClassifier():
             self.validation_handle = sess.run(self.validation_handle_op)
 
             for step in range(int(F.num_steps)):
-                try:
-                    if step % F.log_every == 0:
-                        loss, _, accuracy, summaries, global_step_count = sess.run([self.loss, self.grad_update,
-                         self.accuracy, self.summary_op, sv.global_step], 
-                         feed_dict={self.dataloader.split_handle: self.training_handle})
+                #try:
+                if step % F.log_every == 0:
+                    loss, wloss, _, accuracy, _1, class_wise_accuracy, confusion_matrix, summaries, global_step_count = \
+                            sess.run([self.loss, self.weighted_loss, self.grad_update, self.accuracy, 
+                            self.mean_class_wise_accuracy_update, self.mean_class_wise_accuracy,
+                            self.confusion_matrix, self.summary_op, sv.global_step], 
+                            feed_dict={self.dataloader.split_handle: self.training_handle})
 
-                        sv.summary_computed(sess, summaries, global_step=global_step_count)
-                        logging.info("Step: {}/{}, Global Step: {}, loss: {}, accuracy: {}".format(step, F.num_steps,
-                                                                                                    global_step_count, loss, accuracy))
-                    else:
-                        loss, _, global_step_count = sess.run([self.loss, self.grad_update,
-                         sv.global_step], feed_dict={self.dataloader.split_handle: self.training_handle})
-                except:
-                    logging.info("Smaller batch size error,.. proceeding to next batch size")
+                    sv.summary_computed(sess, summaries, global_step=global_step_count)
+                    logging.info("Step: {}/{}, Global Step: {}, loss: {}, wloss: {}, accuracy: {}, \
+                        class-wise accuracy: {}".format(step, F.num_steps, global_step_count, 
+                        loss, wloss, accuracy, class_wise_accuracy))
+                    logging.info(confusion_matrix)
+                else:
+                    loss, wloss, _,  global_step_count = sess.run([self.loss, self.weighted_loss,
+                            self.grad_update, sv.global_step], feed_dict={self.dataloader.split_handle: self.training_handle})
+                #except:
+                #    logging.info("Smaller batch size error,.. proceeding to next batch size")
                     # pass
 
                 # # logging.info("A step taken")
                 if step % F.save_every==1:
                     logging.info('Saving model to disk as step={}'.format(step))
                     sess.run(self.validation_iter.initializer)
-                    eval_loss, eval_accuracy = [], []
+                    eval_loss, eval_wloss, eval_accuracy, eval_class_accuracy = [], [], [], []
                     while True:
                         try:
-                            loss, accuracy, labels = sess.run([self.loss, self.accuracy, self.labels], 
+                            loss, wloss, accuracy, class_wise_accuracy, labels = sess.run([self.loss, self.weighted_loss, self.accuracy, 
+                                self.mean_class_wise_accuracy,  self.labels], 
                                 feed_dict={self.dataloader.split_handle: self.validation_handle})
                             # logging.info("Trying...{}, mean label: {}".format(len(eval_loss), np.mean(labels)))
                             eval_loss.append(loss)
+                            eval_wloss.append(wloss)
                             eval_accuracy.append(accuracy)
+                            eval_class_accuracy.append(class_wise_accuracy)
                         except:
                             if len(eval_loss) != 0:
                                 eval_loss = np.array(eval_loss)
+                                eval_wloss = np.array(eval_wloss)
                                 eval_accuracy = np.array(eval_accuracy)
-                                logging.info("Current Evaluation Loss at step({}): {}, Mean Loss: {}, Mean Accuracy: {}".format(step, len(eval_loss), eval_loss.mean(), eval_accuracy.mean()))
-                            if eval_loss.mean() < current_best_loss:
-                                print('tada.. lower eval loss!!!')
-                                current_best_loss = eval_loss.mean()
-                                sv.saver.save(sess, sv.save_path+'_reducedLoss', global_step=global_step_count)
+                                eval_class_accuracy = np.array(eval_class_accuracy)
+                                logging.info("Current Evaluation Loss at step({}): {}, Mean Loss: {}, Mean Weighted-Loss: {}, \
+                                    Mean Accuracy: {},  Mean Class-Wise Accuracy: {}".format(step, len(eval_loss), 
+                                    eval_loss.mean(), eval_wloss.mean(), eval_accuracy.mean(), eval_class_accuracy.mean()))
+                            # if eval_loss.mean() < current_best_loss:
+                            #     current_best_loss = eval_loss.mean()
+                            #     sv.saver.save(sess, sv.save_path, global_step=global_step_count)
                             break
