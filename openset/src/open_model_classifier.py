@@ -149,8 +149,8 @@ class OpensetClassifier():
                                 logging.info("Current Evaluation Loss at step({}): {}, Mean Loss: {}, Mean Weighted-Loss: {}, \
                                     Mean Accuracy: {},  Mean Class-Wise Accuracy: {}".format(step, len(eval_loss), 
                                     eval_loss.mean(), eval_wloss.mean(), eval_accuracy.mean(), eval_class_accuracy.mean()))
-                            if eval_loss.mean() < current_best_loss:
-                                print('tada.. lower eval loss!!!')
-                                current_best_loss = eval_loss.mean()
+                            if eval_wloss.mean() < current_best_loss:
+                                print('tada.. lower weighted eval loss!!!')
+                                current_best_loss = eval_wloss.mean()
                                 sv.saver.save(sess, sv.save_path+'_reducedLoss', global_step=global_step_count)
                             break
