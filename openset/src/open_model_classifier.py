@@ -60,6 +60,22 @@ class OpensetClassifier():
         print(self.images.get_shape(), self.labels.get_shape(), self.out.get_shape())
         self.get_loss()        
 
+    def print_evaluation_metrics(self, eval_confusion_matrix, eval_loss, eval_wloss, eval_accuracy, eval_class_accuracy):
+        eval_loss = np.array(eval_loss)
+        eval_wloss = np.array(eval_wloss)
+        eval_accuracy = np.array(eval_accuracy)
+        eval_class_accuracy = np.array(eval_class_accuracy)
+        logging.info("Evaluation Metrics  #################")
+        logging.info("Current Evaluation Loss at step({}): {}, Mean Loss: {}, Mean Weighted-Loss: {}, \
+            Mean Accuracy: {},  Mean Class-Wise Accuracy: {}".format(step, len(eval_loss), 
+            eval_loss.mean(), eval_wloss.mean(), eval_accuracy.mean(), eval_class_accuracy.mean()))
+
+        total_labels = np.sum(eval_confusion_matrix, axis=1)
+        correct_preds = np.diag(eval_confusion_matrix)
+        eval_class_wise_accuracy = 1.*correct_preds/total_labels
+        known_mean_accuracy = np.mean(eval_class_wise_accuracy[:-1])
+        logging.info("Mean Class-wise Accuracy: {}, Mean Known Accuracy: {}".format(eval_class_wise_accuracy, known_mean_accuracy))
+
     def train(self):
         tf.logging.set_verbosity(tf.logging.INFO)
         logging.info("Training Source Network")
@@ -105,24 +121,24 @@ class OpensetClassifier():
             self.validation_handle = sess.run(self.validation_handle_op)
 
             for step in range(int(F.num_steps)):
-                #try:
-                if step % F.log_every == 0:
-                    loss, wloss, _, accuracy, _1, class_wise_accuracy, confusion_matrix, summaries, global_step_count = \
-                            sess.run([self.loss, self.weighted_loss, self.grad_update, self.accuracy, 
-                            self.mean_class_wise_accuracy_update, self.mean_class_wise_accuracy,
-                            self.confusion_matrix, self.summary_op, sv.global_step], 
-                            feed_dict={self.dataloader.split_handle: self.training_handle})
+                try:
+                    if step % F.log_every == 0:
+                        loss, wloss, _, accuracy, _1, class_wise_accuracy, confusion_matrix, summaries, global_step_count = \
+                                sess.run([self.loss, self.weighted_loss, self.grad_update, self.accuracy, 
+                                self.mean_class_wise_accuracy_update, self.mean_class_wise_accuracy,
+                                self.confusion_matrix, self.summary_op, sv.global_step], 
+                                feed_dict={self.dataloader.split_handle: self.training_handle})
 
-                    sv.summary_computed(sess, summaries, global_step=global_step_count)
-                    logging.info("Step: {}/{}, Global Step: {}, loss: {}, wloss: {}, accuracy: {}, \
-                        class-wise accuracy: {}".format(step, F.num_steps, global_step_count, 
-                        loss, wloss, accuracy, class_wise_accuracy))
-                    logging.info(confusion_matrix)
-                else:
-                    loss, wloss, _,  global_step_count = sess.run([self.loss, self.weighted_loss,
-                            self.grad_update, sv.global_step], feed_dict={self.dataloader.split_handle: self.training_handle})
-                #except:
-                #    logging.info("Smaller batch size error,.. proceeding to next batch size")
+                        sv.summary_computed(sess, summaries, global_step=global_step_count)
+                        logging.info("Step: {}/{}, Global Step: {}, loss: {}, wloss: {}, accuracy: {}, \
+                            class-wise accuracy: {}".format(step, F.num_steps, global_step_count, 
+                            loss, wloss, accuracy, class_wise_accuracy))
+                        logging.info(confusion_matrix)
+                    else:
+                        loss, wloss, _,  global_step_count = sess.run([self.loss, self.weighted_loss,
+                                self.grad_update, sv.global_step], feed_dict={self.dataloader.split_handle: self.training_handle})
+                except:
+                   logging.info("Smaller batch size error,.. proceeding to next batch size")
                     # pass
 
                 # # logging.info("A step taken")
