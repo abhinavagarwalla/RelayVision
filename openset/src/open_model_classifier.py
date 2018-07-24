@@ -60,7 +60,7 @@ class OpensetClassifier():
         print(self.images.get_shape(), self.labels.get_shape(), self.out.get_shape())
         self.get_loss()        
 
-    def print_evaluation_metrics(self, eval_confusion_matrix, eval_loss, eval_wloss, eval_accuracy, eval_class_accuracy):
+    def print_evaluation_metrics(self, step, eval_confusion_matrix, eval_loss, eval_wloss, eval_accuracy, eval_class_accuracy):
         eval_loss = np.array(eval_loss)
         eval_wloss = np.array(eval_wloss)
         eval_accuracy = np.array(eval_accuracy)
@@ -95,9 +95,10 @@ class OpensetClassifier():
                                                                                  global_step=global_step)
 
         tf.summary.scalar('cross_entropy_loss', self.loss)
+        tf.summary.scalar('Weighted_Loss', self.weighted_loss)
         tf.summary.scalar('learning_rate', self.lr)
         tf.summary.scalar('accuracy', self.accuracy)
-        tf.summary.scalar('class_wise_accuracy', self.mean_class_wise_accuracy)
+        tf.summary.scalar('mean_class_wise_accuracy', self.mean_class_wise_accuracy)
         self.summary_op = tf.summary.merge_all()
 
         self.saver = tf.train.Saver(max_to_keep=None)
@@ -133,7 +134,6 @@ class OpensetClassifier():
                         logging.info("Step: {}/{}, Global Step: {}, loss: {}, wloss: {}, accuracy: {}, \
                             class-wise accuracy: {}".format(step, F.num_steps, global_step_count, 
                             loss, wloss, accuracy, class_wise_accuracy))
-                        logging.info(confusion_matrix)
                     else:
                         loss, wloss, _,  global_step_count = sess.run([self.loss, self.weighted_loss,
                                 self.grad_update, sv.global_step], feed_dict={self.dataloader.split_handle: self.training_handle})
@@ -146,6 +146,7 @@ class OpensetClassifier():
                     logging.info('Saving model to disk as step={}'.format(step))
                     sess.run(self.validation_iter.initializer)
                     eval_loss, eval_wloss, eval_accuracy, eval_class_accuracy = [], [], [], []
+                    eval_confusion_matrix = None
                     while True:
                         try:
                             loss, wloss, accuracy, class_wise_accuracy, labels = sess.run([self.loss, self.weighted_loss, self.accuracy, 
@@ -157,14 +158,19 @@ class OpensetClassifier():
                             eval_accuracy.append(accuracy)
                             eval_class_accuracy.append(class_wise_accuracy)
                         except:
+                            logging.info("Length of observations: {}".format(len(eval_wloss)))
                             if len(eval_loss) != 0:
                                 eval_loss = np.array(eval_loss)
                                 eval_wloss = np.array(eval_wloss)
                                 eval_accuracy = np.array(eval_accuracy)
                                 eval_class_accuracy = np.array(eval_class_accuracy)
-                                logging.info("Current Evaluation Loss at step({}): {}, Mean Loss: {}, Mean Weighted-Loss: {}, \
-                                    Mean Accuracy: {},  Mean Class-Wise Accuracy: {}".format(step, len(eval_loss), 
-                                    eval_loss.mean(), eval_wloss.mean(), eval_accuracy.mean(), eval_class_accuracy.mean()))
+                                if eval_confusion_matrix:
+                                    eval_confusion_matrix += np.array(confusion_matrix)
+                                else:
+                                    eval_confusion_matrix = np.array(confusion_matrix)
+                                
+                                self.print_evaluation_metrics(step, eval_confusion_matrix, eval_loss, eval_wloss, eval_accuracy, eval_class_accuracy)
+
                             if eval_wloss.mean() < current_best_loss:
                                 print('tada.. lower weighted eval loss!!!')
                                 current_best_loss = eval_wloss.mean()
