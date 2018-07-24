@@ -157,6 +157,10 @@ class OpensetClassifier():
                             eval_wloss.append(wloss)
                             eval_accuracy.append(accuracy)
                             eval_class_accuracy.append(class_wise_accuracy)
+                            if eval_confusion_matrix:
+                                eval_confusion_matrix += np.array(confusion_matrix)
+                            else:
+                                eval_confusion_matrix = np.array(confusion_matrix)
                         except:
                             logging.info("Length of observations: {}".format(len(eval_wloss)))
                             if len(eval_loss) != 0:
@@ -164,10 +168,6 @@ class OpensetClassifier():
                                 eval_wloss = np.array(eval_wloss)
                                 eval_accuracy = np.array(eval_accuracy)
                                 eval_class_accuracy = np.array(eval_class_accuracy)
-                                if eval_confusion_matrix:
-                                    eval_confusion_matrix += np.array(confusion_matrix)
-                                else:
-                                    eval_confusion_matrix = np.array(confusion_matrix)
                                 
                                 self.print_evaluation_metrics(step, eval_confusion_matrix, eval_loss, eval_wloss, eval_accuracy, eval_class_accuracy)
 

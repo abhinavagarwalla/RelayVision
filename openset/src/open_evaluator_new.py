@@ -27,33 +27,64 @@ class GazeEval():
         self.validation_iter = self.validation_data.make_initializable_iterator()
 
     def get_loss(self):
-        if F.loss_type=="cosine":
-            self.losscos = r2d*tf.acos(1-tf.losses.cosine_distance(tf.nn.l2_normalize(self.labels,1), tf.nn.l2_normalize(self.out, 1), dim=1))
-            self.loss = tf.losses.cosine_distance(tf.nn.l2_normalize(self.labels,1), tf.nn.l2_normalize(self.out, 1), dim=1)
-        elif F.loss_type=="mse2d":
-            xl, yl, zl = tf.split(self.labels, 3, axis=1)
-            xo, yo, zo = tf.split(self.out, 3, axis=1)
-            thetal, thetao = tf.asin(-yl), tf.asin(-yo)
-            phil, phio = tf.atan2(-zl, -xl), tf.atan2(-zo, -xo)
-            self.lb = tf.concat([thetal, phil], axis=1)
-            self.ob = tf.concat([thetao, phio], axis=1)
-            self.loss = tf.scalar_mul(tf.constant(r2d), tf.losses.mean_squared_error(self.lb, self.ob, 2))
-        elif F.loss_type=="mse3d":
-            self.loss = tf.losses.mean_squared_error(tf.nn.l2_normalize(self.labels, 0), tf.nn.l2_normalize(self.out, 0))
+        self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.out, labels=self.labels))
+
+        out_class = tf.argmax(self.out, axis=1)
+        labels_class = tf.argmax(self.labels, axis=1)
+
+        def compute_weights(x):
+            return tf.cond(tf.equal(x, 12), lambda: tf.constant(1/10.), lambda: tf.constant(1.0))
+
+        class_weights = tf.map_fn(compute_weights, labels_class, dtype = tf.float32)
+        self.weighted_loss = tf.losses.softmax_cross_entropy(onehot_labels = self.labels,
+                                                            logits = self.out,
+                                                            weights = class_weights)
+
+        self.accuracy = tf.contrib.metrics.accuracy(predictions = out_class,
+                                                     labels = labels_class)
+
+        self.mean_class_wise_accuracy, self.mean_class_wise_accuracy_update = tf.metrics.mean_per_class_accuracy(predictions = out_class, 
+                                                                    labels = labels_class, 
+                                                                    num_classes = F.output_dim)
+        
+        self.confusion_matrix = tf.confusion_matrix(labels = labels_class,
+                                                    predictions = out_class, 
+                                                    num_classes = F.output_dim)
 
     def build_model(self):
         self.images, self.labels = self.dataloader.get_model_inputs()
+
+        self.labels = tf.cast(self.labels, tf.int32)    #Small Hack for converting 
 
         model = SimpleModel(self.images, self.labels, output_dim=F.output_dim, scope='source_classifier')
         self.out, _ = model.get_model()
         self.get_loss()
 
+    def print_evaluation_metrics(self, step, eval_confusion_matrix, eval_loss, eval_wloss, eval_accuracy, eval_class_accuracy):
+        eval_loss = np.array(eval_loss)
+        eval_wloss = np.array(eval_wloss)
+        eval_accuracy = np.array(eval_accuracy)
+        eval_class_accuracy = np.array(eval_class_accuracy)
+        logging.info("Evaluation Metrics  #################")
+        logging.info("Current Evaluation Loss at step({}): {}, Mean Loss: {}, Mean Weighted-Loss: {}, \
+            Mean Accuracy: {},  Mean Class-Wise Accuracy: {}".format(step, len(eval_loss), 
+            eval_loss.mean(), eval_wloss.mean(), eval_accuracy.mean(), eval_class_accuracy.mean()))
+
+        total_labels = np.sum(eval_confusion_matrix, axis=1)
+        correct_preds = np.diag(eval_confusion_matrix)
+        eval_class_wise_accuracy = 1.*correct_preds/total_labels
+        known_mean_accuracy = np.mean(eval_class_wise_accuracy[:-1])
+        logging.info("Mean Class-wise Accuracy: {}, Mean Known Accuracy: {}".format(eval_class_wise_accuracy, known_mean_accuracy))
+
     def eval(self):
         tf.logging.set_verbosity(tf.logging.INFO)
         logging.info("Testing Source Network")
 
-        tf.summary.scalar('mse_loss', self.loss)
-        tf.summary.scalar('angle_loss', self.losscos)
+        tf.summary.scalar('cross_entropy_loss', self.loss)
+        tf.summary.scalar('Weighted_Loss', self.weighted_loss)
+        tf.summary.scalar('learning_rate', self.lr)
+        tf.summary.scalar('accuracy', self.accuracy)
+        tf.summary.scalar('mean_class_wise_accuracy', self.mean_class_wise_accuracy)
         self.summary_op = tf.summary.merge_all()
 
         self.saver = tf.train.Saver(max_to_keep=None)
@@ -73,37 +104,29 @@ class GazeEval():
             logging.info('Starting evaluation: ')
             self.validation_handle = sess.run(self.validation_handle_op)
             sess.run(self.validation_iter.initializer)
-            eval_loss = []
+            eval_loss, eval_wloss, eval_accuracy, eval_class_accuracy = [], [], [], []
+            eval_confusion_matrix = None
             while True:
                 try:
-                    if not F.visualise:
-                        loss, losscos = sess.run([self.loss, self.losscos], feed_dict={self.dataloader.split_handle: self.validation_handle})
-                        print("ckpt::", sv.save_path)
-                        # loss, loss2d, losscos, labels, out = sess.run([self.loss, self.loss2d, self.losscos, self.labels, self.out])
-                        # logging.info("Trying...{}, mean label difference: {}".format(len(eval_loss), np.mean(labels)-np.mean(out)))
-                        # print("First sample: ")
-                        logging.info("Batch loss3d: {}, losscos: {}".format(loss, losscos))
-                        eval_loss.append(losscos)
+                    loss, wloss, accuracy, class_wise_accuracy, labels = sess.run([self.loss, self.weighted_loss, self.accuracy, 
+                                self.mean_class_wise_accuracy,  self.labels], 
+                                feed_dict={self.dataloader.split_handle: self.validation_handle})
+                    # logging.info("Trying...{}, mean label: {}".format(len(eval_loss), np.mean(labels)))
+                    eval_loss.append(loss)
+                    eval_wloss.append(wloss)
+                    eval_accuracy.append(accuracy)
+                    eval_class_accuracy.append(class_wise_accuracy)
+                    if eval_confusion_matrix:
+                        eval_confusion_matrix += np.array(confusion_matrix)
                     else:
-                        loss, images, gts, preds, gts_labels, losscos = sess.run([self.loss, self.images, self.lbl, self.out, self.labels, self.losscos])
-                        images = np.uint8(images)
-                        for idx in range(len(images)):
-                            #print("b4 norm: ", gts_labels[idx], "||", "after norm:", gts[idx])
-                            eye_c = np.array([55/2, 35/2])
-                            cv2.line(images[idx], tuple(eye_c), tuple(eye_c+(gts[idx,:2]*80).astype(int)), (0, 127, 127), 1)
-                            cv2.line(images[idx], tuple(eye_c), tuple(eye_c+(preds[idx,:2]*80).astype(int)), (255,255,255), 1)                                
-                            im = Image.fromarray(images[idx].reshape(35, 55))
-                            a_loss = self.angle_disparity(gts[idx], preds[idx])
-                            im.save(F.visualise_dir + os.sep + str(idx) + '__' +  str(a_loss) + '.jpg')
-                            print("Gt:", gts[idx], "||", "  Pred: ", preds[idx], "||", "aloss: ", a_loss)
-                        print("Vis done.")
-                        sys.exit()
+                        eval_confusion_matrix = np.array(confusion_matrix)
                 except:
-                    print("Exception Raised")
-                    eval_loss = np.array(eval_loss)
-                    if len(eval_loss):
-                        print("Current Evaluation Loss: {}, {}, {}, {}".format(len(eval_loss), eval_loss.mean(), eval_loss.max(), eval_loss.min()))
-                        # if eval_loss.mean() < current_best_loss:
-                        #     current_best_loss = eval_loss.mean()
-                        #     sv.saver.save(sess, sv.save_path)
-                    break
+                    print("Metrics calculated")
+                    if len(eval_loss) != 0:
+                        eval_loss = np.array(eval_loss)
+                        eval_wloss = np.array(eval_wloss)
+                        eval_accuracy = np.array(eval_accuracy)
+                        eval_class_accuracy = np.array(eval_class_accuracy)
+                        
+                        self.print_evaluation_metrics(step, eval_confusion_matrix, eval_loss, eval_wloss, eval_accuracy, eval_class_accuracy)
+                break
