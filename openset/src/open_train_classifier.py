@@ -16,11 +16,11 @@ flags.DEFINE_float("gpu_frac", 0.5, "Gpu fraction")
 flags.DEFINE_float("initial_learning_rate", 0.001, "Learing rate")
 
 # Data paths for Aggie's laptop
-flags.DEFINE_string("train_data_path", "../data/train_tfrecords/", "Directory name containing the dataset [data]")
-flags.DEFINE_string("val_data_path", "../data/validation_tfrecords/", "Directory name containing the dataset [data]")
+#flags.DEFINE_string("train_data_path", "../data/train_tfrecords/", "Directory name containing the dataset [data]")
+#flags.DEFINE_string("val_data_path", "../data/train_tfrecords/", "Directory name containing the dataset [data]")
 # Data paths for Arna's lab PC
-#flags.DEFINE_string("train_data_path", "/media/arna/340fd3c9-2648-4333-9ec9-239babc34bb7/arna_data/RelayVision/train_tfrecords/", "Directory name containing the dataset [data]")
-#flags.DEFINE_string("val_data_path", "/media/arna/340fd3c9-2648-4333-9ec9-239babc34bb7/arna_data/RelayVision/validation_tfrecords/", "Directory name containing the dataset [data]")
+flags.DEFINE_string("train_data_path", "/media/arna/340fd3c9-2648-4333-9ec9-239babc34bb7/arna_data/RelayVision/train_tfrecords/", "Directory name containing the dataset [data]")
+flags.DEFINE_string("val_data_path", "/media/arna/340fd3c9-2648-4333-9ec9-239babc34bb7/arna_data/RelayVision/validation_tfrecords/", "Directory name containing the dataset [data]")
 
 flags.DEFINE_boolean("evaluate", False, "Whether to evaluate a checkpoint or train?")
 flags.DEFINE_string("log_eval_dir", "../logs/eval/", "Directory name to save the logs [logs]")
