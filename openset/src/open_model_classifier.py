@@ -124,10 +124,10 @@ class OpensetClassifier():
             for step in range(int(F.num_steps)):
                 try:
                     if step % F.log_every == 0:
-                        loss, wloss, _, accuracy, _1, class_wise_accuracy, confusion_matrix, summaries, global_step_count = \
+                        loss, wloss, _, accuracy, _1, class_wise_accuracy, summaries, global_step_count = \
                                 sess.run([self.loss, self.weighted_loss, self.grad_update, self.accuracy, 
                                 self.mean_class_wise_accuracy_update, self.mean_class_wise_accuracy,
-                                self.confusion_matrix, self.summary_op, sv.global_step], 
+                                self.summary_op, sv.global_step], 
                                 feed_dict={self.dataloader.split_handle: self.training_handle})
 
                         sv.summary_computed(sess, summaries, global_step=global_step_count)
@@ -147,17 +147,19 @@ class OpensetClassifier():
                     sess.run(self.validation_iter.initializer)
                     eval_loss, eval_wloss, eval_accuracy, eval_class_accuracy = [], [], [], []
                     eval_confusion_matrix = None
+
+                    count_true = 0
                     while True:
                         try:
-                            loss, wloss, accuracy, class_wise_accuracy, labels = sess.run([self.loss, self.weighted_loss, self.accuracy, 
-                                self.mean_class_wise_accuracy,  self.labels], 
+                            loss, wloss, accuracy, class_wise_accuracy, confusion_matrix, labels = sess.run([self.loss, self.weighted_loss, self.accuracy, 
+                                self.mean_class_wise_accuracy, self.confusion_matrix, self.labels], 
                                 feed_dict={self.dataloader.split_handle: self.validation_handle})
                             # logging.info("Trying...{}, mean label: {}".format(len(eval_loss), np.mean(labels)))
                             eval_loss.append(loss)
                             eval_wloss.append(wloss)
                             eval_accuracy.append(accuracy)
                             eval_class_accuracy.append(class_wise_accuracy)
-                            if eval_confusion_matrix:
+                            if eval_confusion_matrix is not None:
                                 eval_confusion_matrix += np.array(confusion_matrix)
                             else:
                                 eval_confusion_matrix = np.array(confusion_matrix)
