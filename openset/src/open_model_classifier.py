@@ -147,8 +147,6 @@ class OpensetClassifier():
                     sess.run(self.validation_iter.initializer)
                     eval_loss, eval_wloss, eval_accuracy, eval_class_accuracy = [], [], [], []
                     eval_confusion_matrix = None
-
-                    count_true = 0
                     while True:
                         try:
                             loss, wloss, accuracy, class_wise_accuracy, confusion_matrix, labels = sess.run([self.loss, self.weighted_loss, self.accuracy, 

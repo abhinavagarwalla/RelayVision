@@ -98,7 +98,6 @@ class GazeEval():
         # Define your supervisor for running a managed session.
         sv = tf.train.Supervisor(logdir=F.log_eval_dir, init_fn=restore_fn, summary_op=None, saver=self.saver)
 
-        current_best_loss = 1000. #TODO: Read it from a file for multiple restarts
         gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=F.gpu_frac)
         with sv.managed_session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:    
             logging.info('Starting evaluation: ')
@@ -108,8 +107,8 @@ class GazeEval():
             eval_confusion_matrix = None
             while True:
                 try:
-                    loss, wloss, accuracy, class_wise_accuracy, labels = sess.run([self.loss, self.weighted_loss, self.accuracy, 
-                                self.mean_class_wise_accuracy,  self.labels], 
+                    loss, wloss, accuracy, class_wise_accuracy, confusion_matrix, labels = sess.run([self.loss, self.weighted_loss, self.accuracy, 
+                                self.mean_class_wise_accuracy,  self.confusion_matrix, self.labels], 
                                 feed_dict={self.dataloader.split_handle: self.validation_handle})
                     # logging.info("Trying...{}, mean label: {}".format(len(eval_loss), np.mean(labels)))
                     eval_loss.append(loss)

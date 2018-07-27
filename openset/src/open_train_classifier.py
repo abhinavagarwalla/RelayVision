@@ -33,7 +33,7 @@ flags.DEFINE_string("checkpoint_file", "1.ckpt", "Name of the model checkpoint")
 flags.DEFINE_string("log_dir", "../logs/open-try-1/", "Directory name to save the logs [logs]")
 flags.DEFINE_boolean("load_chkpt", False, "True for loading saved checkpoint")
 
-flags.DEFINE_integer("batch_size", 8, "The size of batch images [64]")
+flags.DEFINE_integer("batch_size", 16, "The size of batch images [64]")
 flags.DEFINE_integer("output_dim", 13, "Number of output classes.")
 
 flags.DEFINE_integer("channels", 3, "Number of channels in input image")
@@ -45,7 +45,7 @@ flags.DEFINE_integer("num_threads", 4, "Threads to employ for filling input queu
 flags.DEFINE_integer("min_after_dequeue", 8, "Minimum samples to remain after dequeue")
 
 flags.DEFINE_integer("log_every", 50, "Frequency of logging for summary")
-flags.DEFINE_integer("save_every", 100, "Save after steps")
+flags.DEFINE_integer("save_every", 500, "Save after steps")
 FLAGS = flags.FLAGS
 
 
