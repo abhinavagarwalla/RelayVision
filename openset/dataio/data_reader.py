@@ -23,6 +23,7 @@ class CLSReader():
     def create_validation_dataset(self):
         self.split = 'validation'
         filenames = glob(F.val_data_path + 'validation*.tfrecords')
+        print(filenames)
         self.val_split = self.create_dataset(filenames, 1)
         return self.val_split
 

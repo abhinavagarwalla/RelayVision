@@ -60,14 +60,14 @@ class GazeEval():
         self.out, _ = model.get_model()
         self.get_loss()
 
-    def print_evaluation_metrics(self, step, eval_confusion_matrix, eval_loss, eval_wloss, eval_accuracy, eval_class_accuracy):
+    def print_evaluation_metrics(self, eval_confusion_matrix, eval_loss, eval_wloss, eval_accuracy, eval_class_accuracy):
         eval_loss = np.array(eval_loss)
         eval_wloss = np.array(eval_wloss)
         eval_accuracy = np.array(eval_accuracy)
         eval_class_accuracy = np.array(eval_class_accuracy)
         logging.info("Evaluation Metrics  #################")
-        logging.info("Current Evaluation Loss at step({}): {}, Mean Loss: {}, Mean Weighted-Loss: {}, \
-            Mean Accuracy: {},  Mean Class-Wise Accuracy: {}".format(step, len(eval_loss), 
+        logging.info("Current Evaluation Loss: {}, Mean Loss: {}, Mean Weighted-Loss: {}, \
+            Mean Accuracy: {},  Mean Class-Wise Accuracy: {}".format(len(eval_loss), 
             eval_loss.mean(), eval_wloss.mean(), eval_accuracy.mean(), eval_class_accuracy.mean()))
 
         total_labels = np.sum(eval_confusion_matrix, axis=1)
@@ -82,7 +82,6 @@ class GazeEval():
 
         tf.summary.scalar('cross_entropy_loss', self.loss)
         tf.summary.scalar('Weighted_Loss', self.weighted_loss)
-        tf.summary.scalar('learning_rate', self.lr)
         tf.summary.scalar('accuracy', self.accuracy)
         tf.summary.scalar('mean_class_wise_accuracy', self.mean_class_wise_accuracy)
         self.summary_op = tf.summary.merge_all()
@@ -96,11 +95,11 @@ class GazeEval():
         self.validation_handle_op = self.validation_iter.string_handle()
 
         # Define your supervisor for running a managed session.
-        sv = tf.train.Supervisor(logdir=F.log_eval_dir, init_fn=restore_fn, summary_op=None, saver=self.saver)
+        sv = tf.train.Supervisor(logdir=F.log_eval_dir, init_fn=restore_fn, summary_op=None, saver=None)
 
         gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=F.gpu_frac)
         with sv.managed_session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:    
-            logging.info('Starting evaluation: ')
+            logging.info('Starting evaluation  in open_evaluator.py: ')
             self.validation_handle = sess.run(self.validation_handle_op)
             sess.run(self.validation_iter.initializer)
             eval_loss, eval_wloss, eval_accuracy, eval_class_accuracy = [], [], [], []
@@ -115,7 +114,7 @@ class GazeEval():
                     eval_wloss.append(wloss)
                     eval_accuracy.append(accuracy)
                     eval_class_accuracy.append(class_wise_accuracy)
-                    if eval_confusion_matrix:
+                    if eval_confusion_matrix is not None:
                         eval_confusion_matrix += np.array(confusion_matrix)
                     else:
                         eval_confusion_matrix = np.array(confusion_matrix)
@@ -127,5 +126,5 @@ class GazeEval():
                         eval_accuracy = np.array(eval_accuracy)
                         eval_class_accuracy = np.array(eval_class_accuracy)
                         
-                        self.print_evaluation_metrics(step, eval_confusion_matrix, eval_loss, eval_wloss, eval_accuracy, eval_class_accuracy)
-                break
+                        self.print_evaluation_metrics(eval_confusion_matrix, eval_loss, eval_wloss, eval_accuracy, eval_class_accuracy)
+                    break
