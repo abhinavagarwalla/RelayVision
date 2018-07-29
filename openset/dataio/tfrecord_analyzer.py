@@ -6,10 +6,10 @@ from os.path import expanduser
 import os
 os.environ['CUDA_VISIBLE_DEVICES'] = ""
 
-data_path = expanduser("~") + '/Desktop/RelayVision/data/train_tfrecords/train_000_015.tfrecords'
+split = 'validation'
+data_path = expanduser("~") + '/Desktop/RelayVision/data/' + split + '_tfrecords/' + split + '_001_015.tfrecords'
 
 classes = 13
-split = 'train'
 print(data_path)
 # exit()
 
@@ -46,27 +46,27 @@ with tf.Session() as sess:
     threads = tf.train.start_queue_runners(coord=coord)
 
     x_mean, x_std = [], []
-    # try:
-    for batch_index in range(500):
-        img, lbl = sess.run([images, labels])
-        img = img.astype(np.uint8)
-        # print(np.max(img), np.min(img))
-        print("Images, labels shape size: ", img.shape, lbl.shape)
-        #in case of mean image, np.mean(img, axis=0)
-        # print(np.mean(img))
-        x_mean.append(np.mean(img))
-        x_std.append(np.std(img))
-        # exit()
-        print("Labels: ",  lbl)
-        # for j in range(6):
-           # im = Image.fromarray(img[j].reshape(35, 55))
-           # im.save(np.array_str(lbl[j]) + '_' + str(j) + '.jpg')
-    # except:
-    #     print(np.mean(x_mean), np.mean(x_std))
+    try:
+        for batch_index in range(500):
+            img, lbl = sess.run([images, labels])
+            img = img.astype(np.uint8)
+            # print(np.max(img), np.min(img))
+            print(batch_index, "Images, labels shape size: ", img.shape, lbl.shape)
+            #in case of mean image, np.mean(img, axis=0)
+            # print(np.mean(img))
+            # x_mean.append(np.mean(img))
+            # x_std.append(np.std(img))
+            # exit()
+            # print("Labels: ",  lbl)
+            # for j in range(6):
+               # im = Image.fromarray(img[j].reshape(35, 55))
+               # im.save(np.array_str(lbl[j]) + '_' + str(j) + '.jpg')
+    except:
+        print(batch_index)#np.mean(x_mean), np.mean(x_std))
     
-    # Stop the threads
-    coord.request_stop()
-    
-    # Wait for threads to stop
-    coord.join(threads)
-    sess.close()
+        # Stop the threads
+        coord.request_stop()
+        
+        # Wait for threads to stop
+        coord.join(threads)
+        sess.close()

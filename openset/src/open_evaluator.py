@@ -13,7 +13,7 @@ from tensorflow.python.platform import tf_logging as logging
 from glob import glob
 from scipy.spatial import distance
 from sklearn.metrics.pairwise import cosine_similarity
-from dataio.data_reader import CLSReader
+from dataio.data_reader import TestReader, CLSReader
 from model.base_model import SimpleModel
 F = tf.app.flags.FLAGS
 r2d = 180.0/3.14
@@ -23,8 +23,8 @@ class GazeEval():
         self.dataloader = CLSReader()
         self.build_model()
 
-        self.validation_data = self.dataloader.create_validation_dataset()
-        self.validation_iter = self.validation_data.make_initializable_iterator()
+        self.test_data = self.dataloader.create_validation_dataset()
+        self.test_iter = self.test_data.make_one_shot_iterator()
 
     def get_loss(self):
         self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.out, labels=self.labels))
@@ -92,7 +92,7 @@ class GazeEval():
             print("Log-dir: ", F.checkpoint_dir)
             return self.saver.restore(sess, F.checkpoint_dir + F.checkpoint_file)
 
-        self.validation_handle_op = self.validation_iter.string_handle()
+        self.test_handle_op = self.test_iter.string_handle()
 
         # Define your supervisor for running a managed session.
         sv = tf.train.Supervisor(logdir=F.log_eval_dir, init_fn=restore_fn, summary_op=None, saver=None)
@@ -100,31 +100,32 @@ class GazeEval():
         gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=F.gpu_frac)
         with sv.managed_session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:    
             logging.info('Starting evaluation  in open_evaluator.py: ')
-            self.validation_handle = sess.run(self.validation_handle_op)
-            sess.run(self.validation_iter.initializer)
+            self.test_handle = sess.run(self.test_handle_op)
+            # sess.run(self.test_iter.initializer)
             eval_loss, eval_wloss, eval_accuracy, eval_class_accuracy = [], [], [], []
             eval_confusion_matrix = None
             while True:
-                try:
-                    loss, wloss, accuracy, class_wise_accuracy, confusion_matrix, labels = sess.run([self.loss, self.weighted_loss, self.accuracy, 
-                                self.mean_class_wise_accuracy,  self.confusion_matrix, self.labels], 
-                                feed_dict={self.dataloader.split_handle: self.validation_handle})
-                    # logging.info("Trying...{}, mean label: {}".format(len(eval_loss), np.mean(labels)))
-                    eval_loss.append(loss)
-                    eval_wloss.append(wloss)
-                    eval_accuracy.append(accuracy)
-                    eval_class_accuracy.append(class_wise_accuracy)
-                    if eval_confusion_matrix is not None:
-                        eval_confusion_matrix += np.array(confusion_matrix)
-                    else:
-                        eval_confusion_matrix = np.array(confusion_matrix)
-                except:
-                    print("Metrics calculated")
-                    if len(eval_loss) != 0:
-                        eval_loss = np.array(eval_loss)
-                        eval_wloss = np.array(eval_wloss)
-                        eval_accuracy = np.array(eval_accuracy)
-                        eval_class_accuracy = np.array(eval_class_accuracy)
+                # try:
+                loss, wloss, accuracy, _, class_wise_accuracy, confusion_matrix, labels= sess.run([self.loss, self.weighted_loss, self.accuracy, 
+                            self.mean_class_wise_accuracy_update, self.mean_class_wise_accuracy, self.confusion_matrix, self.labels], 
+                            feed_dict={self.dataloader.split_handle: self.test_handle})
+                # logging.info("Trying...{}, mean label: {}".format(len(eval_loss), np.mean(labels)))
+                eval_loss.append(loss)
+                eval_wloss.append(wloss)
+                eval_accuracy.append(accuracy)
+                eval_class_accuracy.append(class_wise_accuracy)
+                # logging.info(filenames)
+                if eval_confusion_matrix is not None:
+                    eval_confusion_matrix += np.array(confusion_matrix)
+                else:
+                    eval_confusion_matrix = np.array(confusion_matrix)
+                # except:
+                #     print("Metrics calculated")
+                #     if len(eval_loss) != 0:
+                #         eval_loss = np.array(eval_loss)
+                #         eval_wloss = np.array(eval_wloss)
+                #         eval_accuracy = np.array(eval_accuracy)
+                #         eval_class_accuracy = np.array(eval_class_accuracy)
                         
-                        self.print_evaluation_metrics(eval_confusion_matrix, eval_loss, eval_wloss, eval_accuracy, eval_class_accuracy)
-                    break
+                #         self.print_evaluation_metrics(eval_confusion_matrix, eval_loss, eval_wloss, eval_accuracy, eval_class_accuracy)
+                #     break
