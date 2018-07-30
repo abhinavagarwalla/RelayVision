@@ -24,22 +24,19 @@ label_mapping = {'aeroplane': 0, 'bicycle': 1, 'bus': 2, 'car': 3,
     'skateboard': 9, 'train': 10, 'truck': 11, 'other': 12}
 classes = 13
 
-def load_image_label(addr):
-    # img = imresize(imread(addr), (64, 64))
+def load_image_label(img_data_path, addr):
     img = cv2.resize(cv2.imread(img_data_path + addr), (64, 64))
-
+    # print(img.shape)
     label = np.zeros(classes)
     label[label_mapping[addr.split('/')[-2]]] = 1
-    # print(label, len([label]))
-    # print(img.shape)
-    # exit(0)
     return img.astype(np.float32), np.array(label).astype(np.float32)
 
 def write_record(img_data_path, train_filename, addrs, split):
+    # print(train_filename, img_data_path)
     writer = tf.python_io.TFRecordWriter(train_filename)
     for idx in tqdm(range(len(addrs))):
         # try:
-        img, label = load_image_label(addrs[idx])
+        img, label = load_image_label(img_data_path, addrs[idx])
 
         # print(img.shape, label.shape)
         # Create a feature
@@ -61,32 +58,26 @@ split_str = 'validation'
 def write_data(img_data_path):
     categories = filter(lambda x: os.path.isdir(os.path.join(img_data_path,x)), os.listdir(img_data_path))
 
-    addrs = []
-    for i in categories:
-        addrs.extend(glob.glob(img_data_path + i + '/*'))
-
-    print(len(addrs))
-    # val_addrs = [glob.glob(img_data_path + i + '/*') for i in patients[int(0.75*len(patients)):int(0.90*len(patients))]]
-    # test_addrs = [glob.glob(img_data_path + i + '/*') for i in patients[int(0.9*len(patients)):]]
+    addrs = [i.strip().split(' ')[0] for i in open(img_data_path + 'image_list.txt').readlines()]
 
     n_shards = 16
-    shuffle(addrs) 
     addrs = np.array_split(np.array(addrs), n_shards)
-    #write_data_path = expanduser("~") + '/Desktop/RelayVision/data/' + split_str + '_tfrecords/' # for Aggie's laptop
-    write_data_path = '/home/arna/Project/RelayVision/' + split_str + '_tfrecords/' # for Arna's lab PC
-    filenames = [write_data_path+'{}_{:0>3}_{:0>3}.tfrecords'.format(split_str, i, n_shards-1) for i in range(n_shards)]
-    # val_filenames = [expanduser("~") + '/domain_adaptation/eye_gaze/data/realMPII/{}_{:0>3}_{:0>3}.tfrecords'.format('val', i, n_shards-1) for i in range(n_shards)]
-    # test_filenames = [expanduser("~") + '/domain_adaptation/eye_gaze/data/realMPII/{}_{:0>3}_{:0>3}.tfrecords'.format('test', i, n_shards-1) for i in range(n_shards)]
 
-    # write_record(img_data_path, filenames[0], addrs[0], split_str)
+    # for i in addrs:
+    #     print(i, len(i))
+    # exit(9)
+    write_data_path = expanduser("~") + '/Desktop/RelayVision/data/' + split_str + '_tfrecords/' # for Aggie's laptop
+    #write_data_path = '/home/arna/Project/RelayVision/' + split_str + '_tfrecords/' # for Arna's lab PC
+    filenames = [write_data_path+'{}_{:0>3}_{:0>3}.tfrecords'.format(split_str, i, n_shards-1) for i in range(n_shards)]
+
+    # for i in range(len(filenames)):
+    #     write_record(img_data_path, filenames[i], addrs[i], split_str)
     p = Pool(n_shards)
-    p.map(write_record, img_data_path, filenames, addrs, [split_str for i in range(n_shards)])
-    # p.map(write_record, val_filenames, val_addrs, ['val' for i in range(n_shards/2)])
-    # p.map(write_record, test_filenames, test_addrs, ['test' for i in range(n_shards/2)])
+    p.map(write_record, [img_data_path for i in range(n_shards)], filenames, addrs, [split_str for i in range(n_shards)])
     sys.stdout.flush()
 
 if __name__=="__main__":
     home = expanduser("~")
-    #img_data_path = home + '/Desktop/RelayVision/data/' + split_str + os.sep # for Aggie's laptop    
-    img_data_path = '/media/arna/340fd3c9-2648-4333-9ec9-239babc34bb7/arna_data/RelayVision/' + split_str + os.sep #for Arna's lab PC
+    img_data_path = home + '/Desktop/RelayVision/data/' + split_str + os.sep # for Aggie's laptop    
+    #img_data_path = '/media/arna/340fd3c9-2648-4333-9ec9-239babc34bb7/arna_data/RelayVision/' + split_str + os.sep #for Arna's lab PC
     write_data(img_data_path)
