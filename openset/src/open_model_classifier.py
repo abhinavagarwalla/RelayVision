@@ -169,7 +169,6 @@ class OpensetClassifier():
                                 eval_wloss = np.array(eval_wloss)
                                 eval_accuracy = np.array(eval_accuracy)
                                 eval_class_accuracy = np.array(eval_class_accuracy)
-                                print("eval class accuracy here:",eval_class_accuracy)
                                 eval_class_wise_accuracy = self.print_evaluation_metrics(step, eval_confusion_matrix, eval_loss, eval_wloss, eval_accuracy, eval_class_accuracy)
 
                             if eval_class_accuracy.mean() > current_best_acc:
