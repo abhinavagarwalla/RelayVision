@@ -15,6 +15,8 @@ from scipy.spatial import distance
 from sklearn.metrics.pairwise import cosine_similarity
 from dataio.data_reader import TestReader, CLSReader
 from model.base_model import SimpleModel
+from sklearn.metrics import confusion_matrix as sk_conf_mat
+
 F = tf.app.flags.FLAGS
 r2d = 180.0/3.14
 
@@ -23,32 +25,32 @@ class GazeEval():
         self.dataloader = CLSReader()
         self.build_model()
 
-        self.test_data = self.dataloader.create_validation_dataset()
+        self.test_data = self.dataloader.create_test_dataset()
         self.test_iter = self.test_data.make_one_shot_iterator()
 
     def get_loss(self):
         self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.out, labels=self.labels))
 
-        out_class = tf.argmax(self.out, axis=1)
-        labels_class = tf.argmax(self.labels, axis=1)
+        self.out_class = tf.argmax(self.out, axis=1)
+        self.labels_class = tf.argmax(self.labels, axis=1)
 
         def compute_weights(x):
             return tf.cond(tf.equal(x, 12), lambda: tf.constant(1/10.), lambda: tf.constant(1.0))
 
-        class_weights = tf.map_fn(compute_weights, labels_class, dtype = tf.float32)
+        class_weights = tf.map_fn(compute_weights, self.labels_class, dtype = tf.float32)
         self.weighted_loss = tf.losses.softmax_cross_entropy(onehot_labels = self.labels,
                                                             logits = self.out,
                                                             weights = class_weights)
 
-        self.accuracy = tf.contrib.metrics.accuracy(predictions = out_class,
-                                                     labels = labels_class)
+        self.accuracy = tf.contrib.metrics.accuracy(predictions = self.out_class,
+                                                     labels = self.labels_class)
 
-        self.mean_class_wise_accuracy, self.mean_class_wise_accuracy_update = tf.metrics.mean_per_class_accuracy(predictions = out_class, 
-                                                                    labels = labels_class, 
+        self.mean_class_wise_accuracy, self.mean_class_wise_accuracy_update = tf.metrics.mean_per_class_accuracy(predictions = self.out_class, 
+                                                                    labels = self.labels_class, 
                                                                     num_classes = F.output_dim)
         
-        self.confusion_matrix = tf.confusion_matrix(labels = labels_class,
-                                                    predictions = out_class, 
+        self.confusion_matrix = tf.confusion_matrix(labels = self.labels_class,
+                                                    predictions = self.out_class, 
                                                     num_classes = F.output_dim)
 
     def build_model(self):
@@ -97,6 +99,8 @@ class GazeEval():
         # Define your supervisor for running a managed session.
         sv = tf.train.Supervisor(logdir=F.log_eval_dir, init_fn=restore_fn, summary_op=None, saver=None)
 
+        submission_file = open(F.submission_file, 'w')
+
         gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=F.gpu_frac)
         with sv.managed_session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:    
             logging.info('Starting evaluation  in open_evaluator.py: ')
@@ -105,27 +109,30 @@ class GazeEval():
             eval_loss, eval_wloss, eval_accuracy, eval_class_accuracy = [], [], [], []
             eval_confusion_matrix = None
             while True:
-                # try:
-                loss, wloss, accuracy, _, class_wise_accuracy, confusion_matrix, labels= sess.run([self.loss, self.weighted_loss, self.accuracy, 
-                            self.mean_class_wise_accuracy_update, self.mean_class_wise_accuracy, self.confusion_matrix, self.labels], 
-                            feed_dict={self.dataloader.split_handle: self.test_handle})
-                # logging.info("Trying...{}, mean label: {}".format(len(eval_loss), np.mean(labels)))
-                eval_loss.append(loss)
-                eval_wloss.append(wloss)
-                eval_accuracy.append(accuracy)
-                eval_class_accuracy.append(class_wise_accuracy)
-                # logging.info(filenames)
-                if eval_confusion_matrix is not None:
-                    eval_confusion_matrix += np.array(confusion_matrix)
-                else:
-                    eval_confusion_matrix = np.array(confusion_matrix)
-                # except:
-                #     print("Metrics calculated")
-                #     if len(eval_loss) != 0:
-                #         eval_loss = np.array(eval_loss)
-                #         eval_wloss = np.array(eval_wloss)
-                #         eval_accuracy = np.array(eval_accuracy)
-                #         eval_class_accuracy = np.array(eval_class_accuracy)
+                try:
+                    out, loss, wloss, accuracy, _, class_wise_accuracy, confusion_matrix, labels= sess.run([self.out_class, self.loss, self.weighted_loss, self.accuracy, 
+                                self.mean_class_wise_accuracy_update, self.mean_class_wise_accuracy, self.confusion_matrix, self.labels_class], 
+                                feed_dict={self.dataloader.split_handle: self.test_handle})
+                    # logging.info("Trying...{}, mean label: {}".format(len(eval_loss), np.mean(labels)))
+                    eval_loss.append(loss)
+                    eval_wloss.append(wloss)
+                    eval_accuracy.append(accuracy)
+                    eval_class_accuracy.append(class_wise_accuracy)
+                    # logging.info(filenames)
+                    if eval_confusion_matrix is not None:
+                        eval_confusion_matrix += np.array(confusion_matrix)
+                    else:
+                        eval_confusion_matrix = np.array(confusion_matrix)
+                    submission_file.write("\n".join(map(str, out.tolist())))
+                    submission_file.write("\n")
+                except:
+                    submission_file.close()
+                    print("Metrics calculated")
+                    if len(eval_loss) != 0:
+                        eval_loss = np.array(eval_loss)
+                        eval_wloss = np.array(eval_wloss)
+                        eval_accuracy = np.array(eval_accuracy)
+                        eval_class_accuracy = np.array(eval_class_accuracy)
                         
-                #         self.print_evaluation_metrics(eval_confusion_matrix, eval_loss, eval_wloss, eval_accuracy, eval_class_accuracy)
-                #     break
+                        self.print_evaluation_metrics(eval_confusion_matrix, eval_loss, eval_wloss, eval_accuracy, eval_class_accuracy)
+                    break

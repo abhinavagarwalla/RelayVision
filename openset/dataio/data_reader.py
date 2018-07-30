@@ -28,6 +28,14 @@ class CLSReader():
         self.val_split = self.create_dataset(filenames, 1)
         return self.val_split
 
+    def create_test_dataset(self):
+        self.split = 'validation'
+        filenames = glob(F.test_data_path + 'validation*.tfrecords')
+        filenames.sort()
+        print(filenames)
+        self.test_split = self.create_dataset(filenames, 1)
+        return self.test_split
+
     def create_dataset(self, filenames, num_epochs=None):
         # filenames = tf.placeholder(tf.string, shape=[None])
         dataset = tf.data.TFRecordDataset(filenames)
