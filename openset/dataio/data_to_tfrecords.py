@@ -69,8 +69,8 @@ def write_data(img_data_path):
     n_shards = 16
     shuffle(addrs) 
     addrs = np.array_split(np.array(addrs), n_shards)
-    write_data_path = expanduser("~") + '/Desktop/RelayVision/data/' + split_str + '_tfrecords/' # for Aggie's laptop
-    #write_data_path = '/home/arna/Project/RelayVision/' + split_str + '_tfrecords/' # for Arna's lab PC
+    #write_data_path = expanduser("~") + '/Desktop/RelayVision/data/' + split_str + '_tfrecords/' # for Aggie's laptop
+    write_data_path = '/home/arna/Project/RelayVision/' + split_str + '_tfrecords/' # for Arna's lab PC
     filenames = [write_data_path+'{}_{:0>3}_{:0>3}.tfrecords'.format(split_str, i, n_shards-1) for i in range(n_shards)]
     # val_filenames = [expanduser("~") + '/domain_adaptation/eye_gaze/data/realMPII/{}_{:0>3}_{:0>3}.tfrecords'.format('val', i, n_shards-1) for i in range(n_shards)]
     # test_filenames = [expanduser("~") + '/domain_adaptation/eye_gaze/data/realMPII/{}_{:0>3}_{:0>3}.tfrecords'.format('test', i, n_shards-1) for i in range(n_shards)]
@@ -84,6 +84,6 @@ def write_data(img_data_path):
 
 if __name__=="__main__":
     home = expanduser("~")
-    img_data_path = home + '/Desktop/RelayVision/data/' + split_str + os.sep # for Aggie's laptop    
-    #img_data_path = '/media/arna/340fd3c9-2648-4333-9ec9-239babc34bb7/arna_data/RelayVision/' + split_str + os.sep #for Arna's lab PC
+    #img_data_path = home + '/Desktop/RelayVision/data/' + split_str + os.sep # for Aggie's laptop    
+    img_data_path = '/media/arna/340fd3c9-2648-4333-9ec9-239babc34bb7/arna_data/RelayVision/' + split_str + os.sep #for Arna's lab PC
     write_data(img_data_path)
