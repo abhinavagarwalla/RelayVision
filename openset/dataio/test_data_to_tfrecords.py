@@ -41,7 +41,8 @@ def write_record(img_data_path, train_filename, addrs, split):
         # print(img.shape, label.shape)
         # Create a feature
         feature = {split + '/label': _bytes_feature(tf.compat.as_bytes(label.tostring())),
-                   split + '/image': _bytes_feature(tf.compat.as_bytes(img.tostring()))}
+                   split + '/image': _bytes_feature(tf.compat.as_bytes(img.tostring())),
+                   split + '/filename': _bytes_feature(tf.compat.as_bytes(addrs[idx].tostring()))}
         
         # Create an example protocol buffer
         example = tf.train.Example(features=tf.train.Features(feature=feature))
@@ -54,7 +55,7 @@ def write_record(img_data_path, train_filename, addrs, split):
 
     writer.close()
 
-split_str = 'test'
+split_str = 'validation'
 def write_data(img_data_path):
     categories = filter(lambda x: os.path.isdir(os.path.join(img_data_path,x)), os.listdir(img_data_path))
 
@@ -63,21 +64,19 @@ def write_data(img_data_path):
     n_shards = 16
     addrs = np.array_split(np.array(addrs), n_shards)
 
-    # for i in addrs:
-    #     print(i, len(i))
-    # exit(9)
-    #write_data_path = expanduser("~") + '/Desktop/RelayVision/data/' + split_str + '_tfrecords/' # for Aggie's laptop
-    write_data_path = '/home/arna/Project/RelayVision/' + split_str + '_tfrecords/' # for Arna's lab PC
+    write_data_path = expanduser("~") + '/Desktop/RelayVision/data/' + split_str + '_tfrecords/' # for Aggie's laptop
+    # write_data_path = '/home/arna/Project/RelayVision/' + split_str + '_tfrecords/' # for Arna's lab PC
     filenames = [write_data_path+'{}_{:0>3}_{:0>3}.tfrecords'.format(split_str, i, n_shards-1) for i in range(n_shards)]
 
     # for i in range(len(filenames)):
-    #     write_record(img_data_path, filenames[i], addrs[i], split_str)
-    p = Pool(n_shards)
-    p.map(write_record, [img_data_path for i in range(n_shards)], filenames, addrs, [split_str for i in range(n_shards)])
-    sys.stdout.flush()
+    i=0
+    write_record(img_data_path, filenames[i], addrs[i], split_str)
+    # p = Pool(n_shards)
+    # p.map(write_record, [img_data_path for i in range(n_shards)], filenames, addrs, [split_str for i in range(n_shards)])
+    # sys.stdout.flush()
 
 if __name__=="__main__":
     home = expanduser("~")
-    #img_data_path = home + '/Desktop/RelayVision/data/' + split_str + os.sep # for Aggie's laptop    
-    img_data_path = '/media/arna/340fd3c9-2648-4333-9ec9-239babc34bb7/arna_data/RelayVision/validation/' #+ split_str + os.sep #for Arna's lab PC
+    img_data_path = home + '/Desktop/RelayVision/data/' + split_str + os.sep # for Aggie's laptop    
+    # img_data_path = '/media/arna/340fd3c9-2648-4333-9ec9-239babc34bb7/arna_data/RelayVision/validation/' #+ split_str + os.sep #for Arna's lab PC
     write_data(img_data_path)

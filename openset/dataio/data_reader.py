@@ -74,9 +74,10 @@ class TestReader():
         self.split_handle = tf.placeholder(tf.string, shape=[])
         self.test_split = None
         self.iterator = tf.data.Iterator.from_string_handle(self.split_handle,
-         (tf.float32, tf.float32),
+         (tf.float32, tf.float32, tf.string),
           ([F.batch_size, F.img_height, F.img_width, F.channels],
-           [F.batch_size, F.output_dim]))
+           [F.batch_size, F.output_dim],
+           [F.batch_size, 1]))
         self.next_element = self.iterator.get_next()
 
         self.split = None
@@ -103,7 +104,8 @@ class TestReader():
 
     def parse_records(self, serialized_example):
         feature = {self.split + '/image': tf.FixedLenFeature([], tf.string),
-                    self.split + '/label': tf.FixedLenFeature([], tf.string)}
+                    self.split + '/label': tf.FixedLenFeature([], tf.string),
+                    self.split + '/filename': tf.FixedLenFeature([], tf.string)}
 
         # Decode the record read by the reader
         features = tf.parse_single_example(serialized_example, features=feature)
@@ -115,7 +117,8 @@ class TestReader():
         label = tf.decode_raw(features[self.split + '/label'], tf.float32)
         label = tf.reshape(label, [F.output_dim])
 
-        return image, label
+        filename = tf.reshape(features[self.split + '/filename'], [1]) 
+        return image, label, filename
 
     def get_model_inputs(self):
         return self.next_element

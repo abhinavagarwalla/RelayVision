@@ -22,7 +22,7 @@ r2d = 180.0/3.14
 
 class GazeEval():
     def __init__(self):
-        self.dataloader = CLSReader()
+        self.dataloader = TestReader()
         self.build_model()
 
         self.test_data = self.dataloader.create_test_dataset()
@@ -54,7 +54,7 @@ class GazeEval():
                                                     num_classes = F.output_dim)
 
     def build_model(self):
-        self.images, self.labels = self.dataloader.get_model_inputs()
+        self.images, self.labels, self.filenames = self.dataloader.get_model_inputs()
 
         self.labels = tf.cast(self.labels, tf.int32)    #Small Hack for converting 
 
@@ -110,19 +110,21 @@ class GazeEval():
             eval_confusion_matrix = None
             while True:
                 try:
-                    out, loss, wloss, accuracy, _, class_wise_accuracy, confusion_matrix, labels= sess.run([self.out_class, self.loss, self.weighted_loss, self.accuracy, 
-                                self.mean_class_wise_accuracy_update, self.mean_class_wise_accuracy, self.confusion_matrix, self.labels_class], 
+                    out, loss, wloss, accuracy, _, class_wise_accuracy, confusion_matrix, labels, filenames = sess.run([self.out_class, self.loss, self.weighted_loss, self.accuracy, 
+                                self.mean_class_wise_accuracy_update, self.mean_class_wise_accuracy,
+                                self.confusion_matrix, self.labels_class, self.filenames], 
                                 feed_dict={self.dataloader.split_handle: self.test_handle})
                     # logging.info("Trying...{}, mean label: {}".format(len(eval_loss), np.mean(labels)))
                     eval_loss.append(loss)
                     eval_wloss.append(wloss)
                     eval_accuracy.append(accuracy)
                     eval_class_accuracy.append(class_wise_accuracy)
-                    # logging.info(filenames)
+
                     if eval_confusion_matrix is not None:
                         eval_confusion_matrix += np.array(confusion_matrix)
                     else:
                         eval_confusion_matrix = np.array(confusion_matrix)
+
                     submission_file.write("\n".join(map(str, out.tolist())))
                     submission_file.write("\n")
                 except:

@@ -6,8 +6,8 @@ from os.path import expanduser
 import os
 os.environ['CUDA_VISIBLE_DEVICES'] = ""
 
-split = 'validation'
-data_path = expanduser("~") + '/Desktop/RelayVision/data/' + split + '_tfrecords/' + split + '_001_015.tfrecords'
+split = 'train'
+data_path = expanduser("~") + '/Desktop/RelayVision/data/' + split + '_tfrecords/' + split + '_009_015.tfrecords'
 
 classes = 13
 print(data_path)
@@ -47,11 +47,13 @@ with tf.Session() as sess:
 
     x_mean, x_std = [], []
     try:
-        for batch_index in range(500):
+        for batch_index in range(20):
             img, lbl = sess.run([images, labels])
             img = img.astype(np.uint8)
             # print(np.max(img), np.min(img))
             print(batch_index, "Images, labels shape size: ", img.shape, lbl.shape)
+            print(np.max(lbl, axis=0))
+            print(sorted(np.argmax(lbl, axis=1)))
             #in case of mean image, np.mean(img, axis=0)
             # print(np.mean(img))
             # x_mean.append(np.mean(img))
