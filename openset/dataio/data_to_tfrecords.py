@@ -26,7 +26,7 @@ classes = 13
 
 def load_image_label(addr):
     # img = imresize(imread(addr), (64, 64))
-    img = cv2.resize(cv2.imread(img_data_path + addr), (64, 64))
+    img = cv2.resize(cv2.imread(addr), (64, 64))
 
     label = np.zeros(classes)
     label[label_mapping[addr.split('/')[-2]]] = 1

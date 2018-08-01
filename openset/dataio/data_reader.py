@@ -24,13 +24,15 @@ class CLSReader():
     def create_validation_dataset(self):
         self.split = 'validation'
         filenames = glob(F.val_data_path + 'validation*.tfrecords')
+        filenames.sort()
+        filenames = filenames[0:5]
         print(filenames)
         self.val_split = self.create_dataset(filenames, 1)
         return self.val_split
 
     def create_test_dataset(self):
-        self.split = 'validation'
-        filenames = glob(F.test_data_path + 'validation*.tfrecords')
+        self.split = 'test'
+        filenames = glob(F.test_data_path + 'test*.tfrecords')
         filenames.sort()
         print(filenames)
         self.test_split = self.create_dataset(filenames, 1)
