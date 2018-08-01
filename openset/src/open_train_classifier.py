@@ -16,14 +16,14 @@ flags.DEFINE_float("gpu_frac", 0.5, "Gpu fraction")
 flags.DEFINE_float("initial_learning_rate", 0.001, "Learing rate")
 
 # Data paths for Aggie's laptop
-flags.DEFINE_string("train_data_path", "../data/train_tfrecords/", "Directory name containing the dataset [data]")
-flags.DEFINE_string("val_data_path", "../data/validation_tfrecords/", "Directory name containing the dataset [data]")
-flags.DEFINE_string("test_data_path", "../data/validation_tfrecords/", "Directory name containing the dataset [data]")
+#flags.DEFINE_string("train_data_path", "../data/train_tfrecords/", "Directory name containing the dataset [data]")
+#flags.DEFINE_string("val_data_path", "../data/validation_tfrecords/", "Directory name containing the dataset [data]")
+#flags.DEFINE_string("test_data_path", "../data/validation_tfrecords/", "Directory name containing the dataset [data]")
 
 # Data paths for Arna's lab PC
-# flags.DEFINE_string("train_data_path", "/media/arna/340fd3c9-2648-4333-9ec9-239babc34bb7/arna_data/RelayVision/train_tfrecords/", "Directory name containing the dataset [data]")
-# flags.DEFINE_string("val_data_path", "/media/arna/340fd3c9-2648-4333-9ec9-239babc34bb7/arna_data/RelayVision/validation_tfrecords/", "Directory name containing the dataset [data]")
-# flags.DEFINE_string("test_data_path", "/media/arna/340fd3c9-2648-4333-9ec9-239babc34bb7/arna_data/RelayVision/validation_tfrecords/", "Directory name containing the dataset [data]")
+flags.DEFINE_string("train_data_path", "/media/arna/340fd3c9-2648-4333-9ec9-239babc34bb7/arna_data/RelayVision/train_tfrecords/", "Directory name containing the dataset [data]")
+flags.DEFINE_string("val_data_path", "/media/arna/340fd3c9-2648-4333-9ec9-239babc34bb7/arna_data/RelayVision/validation_tfrecords/", "Directory name containing the dataset [data]")
+flags.DEFINE_string("test_data_path", "/media/arna/340fd3c9-2648-4333-9ec9-239babc34bb7/arna_data/RelayVision/test_tfrecords/", "Directory name containing the dataset [data]")
 
 flags.DEFINE_boolean("evaluate", False, "Whether to evaluate a checkpoint or train?")
 flags.DEFINE_string("log_eval_dir", "../logs/eval/", "Directory name to save the logs [logs]")
@@ -33,12 +33,12 @@ flags.DEFINE_string("submission_file", "../results/submission_1.txt", "The submi
 flags.DEFINE_boolean("visualise", False, "Whether to visualise predictions?")
 flags.DEFINE_string("visualise_dir", "../vis/", "Directory to store visualisations")
 
-flags.DEFINE_string("checkpoint_dir", "checkpoint/", "Directory name to save the checkpoints [checkpoint]")
-flags.DEFINE_string("checkpoint_file", "1.ckpt", "Name of the model checkpoint")
+flags.DEFINE_string("checkpoint_dir", "../checkpoint/", "Directory name to save the checkpoints [checkpoint]")
+flags.DEFINE_string("checkpoint_file", "model.ckpt_reducedLoss", "Name of the model checkpoint")
 flags.DEFINE_string("log_dir", "../logs/open-try-1/", "Directory name to save the logs [logs]")
 flags.DEFINE_boolean("load_chkpt", False, "True for loading saved checkpoint")
 
-flags.DEFINE_integer("batch_size", 16, "The size of batch images [64]")
+flags.DEFINE_integer("batch_size", 32, "The size of batch images [64]")
 flags.DEFINE_integer("output_dim", 13, "Number of output classes.")
 
 flags.DEFINE_integer("channels", 3, "Number of channels in input image")

@@ -171,8 +171,8 @@ class OpensetClassifier():
                                 eval_class_accuracy = np.array(eval_class_accuracy)
                                 eval_class_wise_accuracy = self.print_evaluation_metrics(step, eval_confusion_matrix, eval_loss, eval_wloss, eval_accuracy, eval_class_accuracy)
 
-                            if eval_class_accuracy.mean() > current_best_acc:
+                            if eval_class_wise_accuracy.mean() > current_best_acc:
                                 print('tada.. better class-wise accuracy!!!')
-                                current_best_acc = eval_class_accuracy.mean()
+                                current_best_acc = eval_class_wise_accuracy.mean()
                                 sv.saver.save(sess, sv.save_path+'_reducedLoss')#, global_step=global_step_count)
                             break
