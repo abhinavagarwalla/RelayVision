@@ -9,16 +9,16 @@ class SimpleModel():
         self.output_dim = output_dim
         self.scope = scope
 
-    # def adaptation(self, h2, h4,l2):
-    #     h2_shape = h2.get_shape().as_list()
-    #     h4_reshaped = tf.image.resize_bilinear(h4, [32, 60])
-    #     h2_reshaped = tf.image.resize_bilinear(h2, [32, 60])
-    #     l2 = tf.reshape(l2, [-1, 32, 60, 5])
-    #     a1 = tf.concat([h2_reshaped, h4_reshaped, l2], axis=3)
-    #     #print("h2::", h2.get_shape())
-    #     #print("h4:", h4.get_shape())
-    #     #print("a1:", a1.get_shape())
-    #     return a1
+    def adaptation(self, h2, h4,l2):
+        h2_shape = h2.get_shape().as_list()
+        h4_reshaped = tf.image.resize_bilinear(h4, [32, 60])
+        h2_reshaped = tf.image.resize_bilinear(h2, [32, 60])
+        l2 = tf.reshape(l2, [-1, 32, 60, 5])
+        a1 = tf.concat([h2_reshaped, h4_reshaped, l2], axis=3)
+        #print("h2::", h2.get_shape())
+        #print("h4:", h4.get_shape())
+        #print("a1:", a1.get_shape())
+        return a1
 
     def get_model(self):
         with tf.variable_scope(self.scope):
@@ -39,8 +39,8 @@ class SimpleModel():
             # out = tf.nn.tanh(linear(l3, F.output_dim))
             out = linear(l3, self.output_dim)
 
-            # to_adapt = self.adaptation(h2, h4, l2)
-            return out, None
+            to_adapt = self.adaptation(h2, h4, l2)
+            return out, to_adapt
 
 class AdversaryModel():
     def __init__(self, input_vec=None, scope=None, prob=None, reuse=False):

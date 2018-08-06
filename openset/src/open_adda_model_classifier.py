@@ -68,7 +68,19 @@ class GazeAddaclassifier():
                 
                 self.adversary_loss += F.gp_lambda * grad_penalty
 
-        self.angle_loss = r2d*tf.acos(1-tf.losses.cosine_distance(tf.nn.l2_normalize(self.target_labels,1), tf.nn.l2_normalize(self.target_out, 1), dim=1))
+        out_class = tf.argmax(self.target_out, axis=1)
+        labels_class = tf.argmax(self.target_labels, axis=1)
+
+        self.accuracy = tf.contrib.metrics.accuracy(predictions = out_class,
+                                                     labels = labels_class)
+
+        self.mean_class_wise_accuracy, self.mean_class_wise_accuracy_update = tf.metrics.mean_per_class_accuracy(predictions = out_class, 
+                                                                    labels = labels_class, 
+                                                                    num_classes = F.output_dim)
+        
+        self.confusion_matrix = tf.confusion_matrix(labels = labels_class,
+                                                    predictions = out_class, 
+                                                    num_classes = F.output_dim)
 
     def build_model(self):
         self.source_images, self.source_labels = self.dataloader.get_source_model_inputs()
@@ -76,10 +88,6 @@ class GazeAddaclassifier():
 
         self.fc_prob = tf.placeholder_with_default(0.5, shape=())
         self.conv_prob = tf.placeholder_with_default(0.1, shape=())
-
-        self.mean = tf.placeholder_with_default(syn_data_mean, shape=())
-        # source_model = MeanReLUModel(self.source_images, self.source_labels, F.output_dim, mean=self.mean, prob=0., scope='source_classifier')
-        # target_model = MeanReLUModel(self.target_images, self.target_labels, F.output_dim, mean=self.mean, prob=0., scope='target_classifier')
         
         source_model = SimpleModel(self.source_images, self.source_labels, F.output_dim, scope='source_classifier')
         target_model = SimpleModel(self.target_images, self.target_labels, F.output_dim, scope='target_classifier')
@@ -209,23 +217,39 @@ class GazeAddaclassifier():
                 if step % F.check_every==1:
                     logging.info("Evaluating target model on data")
                     sess.run(self.eval_iter.initializer)
-                    eval_loss = []
+                    eval_accuracy, eval_class_accuracy = [], []
+                    eval_confusion_matrix = None
                     # i = 4
                     while True:
                         try:
-                            # loss = sess.run([self.angle_loss], feed_dict={self.dataloader.source_split_handle: self.source_handle, self.dataloader.target_split_handle: self.target_handle})
-                            loss = sess.run([self.angle_loss], feed_dict={self.dataloader.source_split_handle: self.source_handle,
-                             self.dataloader.target_split_handle: self.eval_handle,
-                             self.conv_prob: 0.0, self.fc_prob: 0.0})
-                            eval_loss.append(loss)
+                            accuracy, class_wise_accuracy, confusion_matrix, labels = sess.run([self.accuracy, 
+                                self.mean_class_wise_accuracy, self.confusion_matrix, self.target_labels], 
+                                feed_dict={self.dataloader.source_split_handle: self.source_handle,
+                                            self.dataloader.target_split_handle: self.eval_handle,
+                                            self.conv_prob: 0.0, self.fc_prob: 0.0})
+                            eval_accuracy.append(accuracy)
+                            eval_class_accuracy.append(class_wise_accuracy)
+                            if eval_confusion_matrix is not None:
+                                eval_confusion_matrix += np.array(confusion_matrix)
+                            else:
+                                eval_confusion_matrix = np.array(confusion_matrix)
                             # i -= 1
                             # if i < 0:
                             #     raise Exception()
                         except:
-                            if len(eval_loss):
-                                eval_loss = np.array(eval_loss)
-                                logging.info("Current Evaluation Loss at step({}): {}, Mean Angle Loss: {}, {}, {}".format(step, len(eval_loss), eval_loss.mean(), eval_loss.max(), eval_loss.min()))
-                                break
+                            if len(eval_accuracy):
+                                eval_accuracy = np.array(eval_accuracy)
+                                eval_class_accuracy = np.array(eval_class_accuracy)
+                                
+                                logging.info("Evaluation Metrics; Length: {}  #################".format(len(eval_accuracy)))
+                                logging.info("Accuracy: {}, Class-wise Accuracy: {}".format(eval_accuracy.mean(),
+                                                                                         eval_class_accuracy.mean()))
+
+                                total_labels = np.sum(eval_confusion_matrix, axis=1)
+                                correct_preds = np.diag(eval_confusion_matrix)
+                                eval_class_wise_accuracy = 1.*correct_preds/total_labels
+                                known_mean_accuracy = np.mean(eval_class_wise_accuracy[:-1])
+                                logging.info("Mean Class-wise Accuracy: {}, Mean Known Accuracy: {}".format(eval_class_wise_accuracy, known_mean_accuracy))
                             else:
                                 print("No Evaluation Loss as eval_loss array empty")
-                                break
+                            break
