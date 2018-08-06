@@ -21,19 +21,19 @@ flags.DEFINE_integer("d_iter", 5, "Number of discrimintor update steps")
 flags.DEFINE_integer("beta1", 0.5, "Beta1 parameter for Adam")
 flags.DEFINE_integer("beta2", 0.9, "Beta2 parameter for Adam")
 
-flags.DEFINE_string("source_data_path", "../data/syn_data_4_april_2018_norm/", "Directory name containing the dataset [data]")
-flags.DEFINE_string("target_data_path", "../data/realMPII_train_val_test/", "Directory name containing the dataset [data]")
-flags.DEFINE_string("test_data_path", "../data/realMPII_train_val_test/", "Directory name containing the dataset [data]")
+flags.DEFINE_string("source_data_path", "../data/train_tfrecords/", "Directory name containing the dataset [data]")
+flags.DEFINE_string("target_data_path", "../data/validation_tfrecords/", "Directory name containing the dataset [data]")
+flags.DEFINE_string("test_data_path", "../data/validation_tfrecords/", "Directory name containing the dataset [data]")
 
 flags.DEFINE_boolean("evaluate", False, "Whether to evaluate a checkpoint or train?")
 flags.DEFINE_string("log_eval_dir", "../logs/adda/eval/", "Directory name to save the logs [logs]")
-flags.DEFINE_string("loss_type", "cosine", "The loss function to train the model with")
+
 flags.DEFINE_boolean("visualise", False, "Whether to visualise predictions?")
 flags.DEFINE_string("visualise_dir", "../vis/", "Directory to store visualisations")
 
-flags.DEFINE_string("source_checkpoint_dir", "../logs/latest_model_15/source/", "Directory name to save the checkpoints [checkpoint]")
+flags.DEFINE_string("source_checkpoint_dir", "../logs/adda_model/source/", "Directory name to save the checkpoints [checkpoint]")
 flags.DEFINE_string("source_checkpoint_file", "model.ckpt", "Name of the model checkpoint")
-flags.DEFINE_string("target_checkpoint_dir", "../logs/latest_model_15/target/", "Directory name to save the checkpoints [checkpoint]")
+flags.DEFINE_string("target_checkpoint_dir", "../logs/adda_model/target/", "Directory name to save the checkpoints [checkpoint]")
 flags.DEFINE_string("target_checkpoint_file", "model.ckpt", "Name of the model checkpoint")
 
 flags.DEFINE_string("log_dir", "../logs/adda/", "Directory name to save the logs [logs]")
