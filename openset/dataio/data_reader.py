@@ -147,15 +147,15 @@ class ADDAReader():
         return self.source_split
 
     def create_target_dataset(self):
-        self.split = 'train'
-        filenames = glob(F.target_data_path + 'train*.tfrecords')
+        self.split = 'validation'
+        filenames = glob(F.target_data_path + 'validation*.tfrecords')
         print(filenames)
         self.target_split = self.create_dataset(filenames)
         return self.target_split
 
     def create_val_dataset(self):
-        self.split = 'val'
-        filenames = glob(F.test_data_path + 'val*.tfrecords')[:2]
+        self.split = 'validation'
+        filenames = glob(F.test_data_path + 'validation*.tfrecords')[:2]
         print(filenames)
         self.test_split = self.create_dataset(filenames)
         return self.test_split
